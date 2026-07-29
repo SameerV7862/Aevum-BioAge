@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:js_interop';
 import 'dart:typed_data';
 
@@ -18,13 +17,13 @@ const List<String> _mediaPipeLandmarkNames = [
   'left_foot_index', 'right_foot_index',
 ];
 
-// --- JS interop types ---
+// --- JS interop bindings ---
 
 @JS('AevumPoseBridge.initialize')
-external JSPromise<JSBoolean> _jsInitialize();
+external JSPromise _jsInitialize();
 
 @JS('AevumPoseBridge.processVideoFrame')
-external JSPromise<JSAny?> _jsProcessVideoFrame();
+external JSPromise _jsProcessVideoFrame();
 
 @JS('AevumPoseBridge.dispose')
 external void _jsDispose();
@@ -32,14 +31,14 @@ external void _jsDispose();
 @JS('AevumPoseBridge.setVideoElement')
 external void _jsSetVideoElement(JSObject videoEl);
 
-/// Extension to read landmark properties from JS results.
-extension on JSObject {
-  external JSArray<JSAny> get landmarks;
+/// JS interop extension type for the pose result object returned by the bridge.
+extension type JSPoseResult._(JSObject _) implements JSObject {
+  external JSArray<JSLandmark> get landmarks;
   external JSNumber get confidence;
 }
 
-/// Reads a JS landmark object's properties.
-extension on JSAny {
+/// JS interop extension type for a single landmark.
+extension type JSLandmark._(JSObject _) implements JSObject {
   external JSNumber get x;
   external JSNumber get y;
   external JSNumber get z;
@@ -56,17 +55,14 @@ class MediaPipeWebPoseEngine implements PoseEngine {
 
   @override
   Future<void> initialize() async {
-    final result = await _jsInitialize().toDart;
-    _initialized = result.toDart;
+    final jsResult = await _jsInitialize().toDart;
+    _initialized = (jsResult as JSBoolean).toDart;
     if (!_initialized) {
       throw StateError('MediaPipe Pose Landmarker failed to initialize');
     }
   }
 
   /// Attach the HTML <video> element that the camera feed writes to.
-  ///
-  /// Called once after the camera stream is active. The JS bridge reads
-  /// frames from this element on each [processCameraFrame] call.
   void setVideoElement(JSObject videoElement) {
     _jsSetVideoElement(videoElement);
   }
@@ -77,19 +73,18 @@ class MediaPipeWebPoseEngine implements PoseEngine {
     int width,
     int height,
   ) async {
-    // On web the bridge reads directly from the video element —
-    // the bytes/width/height parameters are unused.
     if (!_initialized) return null;
 
     final jsResult = await _jsProcessVideoFrame().toDart;
-    if (jsResult == null) return null;
+    if (jsResult == null || jsResult.isUndefinedOrNull) return null;
 
-    final resultObj = jsResult as JSObject;
-    final jsLandmarks = resultObj.landmarks;
-    final confidence = (resultObj.confidence as JSNumber).toDartDouble;
+    final result = jsResult as JSPoseResult;
+    final jsLandmarks = result.landmarks;
+    final confidence = result.confidence.toDartDouble;
+    final count = jsLandmarks.length;
 
     final landmarks = <PoseLandmark>[];
-    for (var i = 0; i < jsLandmarks.length && i < 33; i++) {
+    for (var i = 0; i < count && i < 33; i++) {
       final lm = jsLandmarks[i];
       landmarks.add(PoseLandmark(
         name: i < _mediaPipeLandmarkNames.length

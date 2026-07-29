@@ -115,11 +115,11 @@ class CraneSpriteComponent extends SpriteAnimationComponent with HasGameRef {
     final image = await generateCraneSpriteSheet();
     final sheet = SpriteSheet(image: image, srcSize: Vector2(64, 64));
 
-    // Build animations from the 6-frame sheet at different speeds
-    _idleAnim = sheet.createAnimation(row: 0, stepTime: 0.25, from: 1, to: 4);
-    _flapAnim = sheet.createAnimation(row: 0, stepTime: 0.06, from: 0, to: 6);
-    _glideAnim = sheet.createAnimation(row: 0, stepTime: 0.4, from: 2, to: 4);
-    _boostAnim = sheet.createAnimation(row: 0, stepTime: 0.04, from: 0, to: 6);
+    // Build animations from the 6-frame sheet (indices 0–5) at different speeds
+    _idleAnim = sheet.createAnimation(row: 0, stepTime: 0.25, from: 1, to: 3);
+    _flapAnim = sheet.createAnimation(row: 0, stepTime: 0.06, from: 0, to: 5);
+    _glideAnim = sheet.createAnimation(row: 0, stepTime: 0.4, from: 2, to: 3);
+    _boostAnim = sheet.createAnimation(row: 0, stepTime: 0.04, from: 0, to: 5);
 
     animation = _idleAnim;
   }
