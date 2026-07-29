@@ -1,0 +1,25 @@
+name: mobile
+
+description: Aevum BioAge cross-platform mobile app
+publish_to: "none"
+
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  camera: ^0.11.0+2
+  flame: ^1.20.0
+  collection: ^1.19.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

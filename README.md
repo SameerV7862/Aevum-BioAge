@@ -1,54 +1,59 @@
 # Aevum BioAge
 
-Camera-based **biological age estimate** experience using movement performance from:
+Cross-platform **biological age estimate** experience using movement performance from:
 - Push-up game mode
 - Squat game mode
 
 Built for **Aevum** with an arcade layer inspired by Flappy mechanics, where the player controls an **Aevum crane** through exercise-driven rhythm challenges.
 
-## Vision
-A user performs push-ups or squats in front of an iPhone camera. Real-time pose tracking powers:
-1. Rep/form detection
-2. Irregular rhythm challenges (holds, quick doubles, tempo shifts)
-3. Arcade survival/progression using an Aevum crane avatar
-4. A movement-derived biological age estimate (wellness metric)
+## Why cross-platform
+Primary audience includes Android-first users. This implementation uses a shared Flutter codebase so iOS and Android both work from day one.
 
-## Core principles
-- **On-device first** pose and scoring where possible
-- **Interpretable** model outputs (feature-based, not black-box-only)
-- **Wellness estimate, not diagnosis**
-- **Fast iteration** with modular game + scoring architecture
+## Tech stack (v1 scaffold)
+- Flutter + Dart
+- Flame (2D game loop and scene)
+- Camera plugin
+- Pose abstraction ready for MediaPipe integration
 
 ## Repository layout
 
 ```text
-ios/
-  AevumBioAge/
+apps/
+  mobile/
+    lib/
+      app/
+      theme/
+      camera/
+      pose/
+      exercise/
+      game/
+      scoring/
+      features/session/
+    pubspec.yaml
 docs/
-  product-spec.md
-  game-design.md
-  bioage-model-v1.md
-  implementation-roadmap.md
-  brand-guidelines.md
 research/
-  literature-notes.md
-  feature-to-bioage-mapping.md
 ```
 
-## Initial scope (v1)
-- iPhone camera feed + pose estimation
-- Push-up and squat detectors (rep count + quality signals)
-- Aevum crane Flappy-style overlay with movement-triggered control events
-- Feature extraction from exercise/gameplay
-- Biological age estimate from push-up-only or squat-only session data
-- Results screen with confidence band + plain-language explanation
+## Run the mobile app
 
-## Non-goals (v1)
-- Medical diagnosis or treatment recommendations
-- Multi-sensor wearable fusion
-- Cloud-dependent mandatory inference
+1. Install Flutter SDK
+2. From `apps/mobile`:
+   - `flutter pub get`
+   - `flutter run`
 
-## Compliance & disclaimers
-This product provides a **fitness/wellness estimate** and is **not a medical device** in v1 unless regulatory strategy changes.
+## Current scaffold status
+- App shell and navigation
+- Camera preview screen scaffold
+- Pose engine interface + placeholder implementation
+- Push-up and squat detector state machine skeletons
+- Rhythm prompt engine (irregular cadence prompts)
+- Flame game scene with Aevum crane placeholder component
+- Bio-age scoring engine skeleton
+- Aevum theme token placeholders
 
-See `docs/bioage-model-v1.md` and `docs/product-spec.md` for details.
+## Next integration tasks
+1. Wire real-time camera frames to pose engine
+2. Integrate MediaPipe pose model and landmarks
+3. Finalize rep detection thresholds with test clips
+4. Connect exercise events into Flame game controls
+5. Calibrate bio-age mapping with evidence-backed coefficients
