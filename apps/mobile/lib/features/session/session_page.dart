@@ -1,5 +1,6 @@
 import 'package:camera/camera.dart';
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../camera/camera_service.dart';
@@ -8,6 +9,8 @@ import '../../exercise/squat_detector.dart';
 import '../../game/aevum_flappy_game.dart';
 
 class SessionPage extends StatefulWidget {
+  static const routeName = '/session';
+
   const SessionPage({super.key});
 
   @override
@@ -21,7 +24,9 @@ class _SessionPageState extends State<SessionPage> {
   final _game = AevumFlappyGame();
 
   bool _loading = true;
+  bool _cameraReady = false;
   String _mode = 'pushup';
+  String? _cameraError;
 
   @override
   void initState() {
@@ -30,8 +35,17 @@ class _SessionPageState extends State<SessionPage> {
   }
 
   Future<void> _init() async {
-    await _cameraService.initialize();
-    setState(() => _loading = false);
+    try {
+      await _cameraService.initialize();
+      _cameraReady = _cameraService.controller?.value.isInitialized == true;
+    } catch (e) {
+      _cameraError = 'Camera unavailable: $e';
+      _cameraReady = false;
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
   }
 
   @override
@@ -51,7 +65,7 @@ class _SessionPageState extends State<SessionPage> {
     final controller = _cameraService.controller;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Aevum BioAge'),
+        title: const Text('Aevum BioAge Session'),
       ),
       body: Column(
         children: [
@@ -60,10 +74,10 @@ class _SessionPageState extends State<SessionPage> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (controller != null && controller.value.isInitialized)
+                if (_cameraReady && controller != null && controller.value.isInitialized)
                   CameraPreview(controller)
                 else
-                  const ColoredBox(color: Colors.black12),
+                  _CameraFallback(error: _cameraError, isWeb: kIsWeb),
                 GameWidget(game: _game),
               ],
             ),
@@ -84,6 +98,8 @@ class _SessionPageState extends State<SessionPage> {
                     selected: {_mode},
                     onSelectionChanged: (set) {
                       setState(() => _mode = set.first);
+                      _pushupDetector.reset();
+                      _squatDetector.reset();
                     },
                   ),
                   const SizedBox(height: 12),
@@ -96,7 +112,6 @@ class _SessionPageState extends State<SessionPage> {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
-                            // Temporary manual test controls.
                             _game.onNormalRep();
                           },
                           child: const Text('Test Flap'),
@@ -109,6 +124,43 @@ class _SessionPageState extends State<SessionPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CameraFallback extends StatelessWidget {
+  final String? error;
+  final bool isWeb;
+
+  const _CameraFallback({required this.error, required this.isWeb});
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Colors.black12,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.videocam_off, size: 44),
+              const SizedBox(height: 8),
+              Text(
+                error ?? 'Camera preview unavailable',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isWeb
+                    ? 'On web, ensure HTTPS and browser camera permission are enabled.'
+                    : 'Check app permission settings and retry.',
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -1,0 +1,8 @@
+[build]
+  command = "cd apps/mobile && flutter pub get && flutter build web --release"
+  publish = "apps/mobile/build/web"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

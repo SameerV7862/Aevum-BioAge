@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../features/session/session_page.dart';
+import '../features/web/web_home_page.dart';
 import '../theme/aevum_theme.dart';
 
 class AevumBioAgeApp extends StatelessWidget {
@@ -12,7 +14,10 @@ class AevumBioAgeApp extends StatelessWidget {
       title: 'Aevum BioAge',
       debugShowCheckedModeBanner: false,
       theme: AevumTheme.light(),
-      home: const SessionPage(),
+      home: kIsWeb ? const WebHomePage() : const SessionPage(),
+      routes: {
+        SessionPage.routeName: (_) => const SessionPage(),
+      },
     );
   }
 }

@@ -7,13 +7,14 @@ Cross-platform **biological age estimate** experience using movement performance
 Built for **Aevum** with an arcade layer inspired by Flappy mechanics, where the player controls an **Aevum crane** through exercise-driven rhythm challenges.
 
 ## Why cross-platform
-Primary audience includes Android-first users. This implementation uses a shared Flutter codebase so iOS and Android both work from day one.
+Primary audience includes Android-first users. This implementation uses a shared Flutter codebase so iOS, Android, and Web can work from one codebase.
 
 ## Tech stack (v1 scaffold)
 - Flutter + Dart
 - Flame (2D game loop and scene)
 - Camera plugin
 - Pose abstraction ready for MediaPipe integration
+- Web static build deployable on any server/CDN
 
 ## Repository layout
 
@@ -29,21 +30,55 @@ apps/
       game/
       scoring/
       features/session/
+      features/web/
+    web/
     pubspec.yaml
+deploy/
+  nginx.conf
+  Dockerfile
+  vercel.json
+  netlify.toml
 docs/
 research/
 ```
 
-## Run the mobile app
+## Local development
 
-1. Install Flutter SDK
-2. From `apps/mobile`:
-   - `flutter pub get`
-   - `flutter run`
+From `apps/mobile`:
+
+```bash
+flutter pub get
+flutter run -d chrome
+```
+
+For mobile:
+
+```bash
+flutter run
+```
+
+## Build for web
+
+```bash
+cd apps/mobile
+flutter build web --release
+```
+
+Output is generated at:
+`apps/mobile/build/web`
+
+## Server deploy options
+- **Nginx static host** using `deploy/nginx.conf`
+- **Docker** image using `deploy/Dockerfile`
+- **Vercel** using `deploy/vercel.json`
+- **Netlify** using `deploy/netlify.toml`
+
+See `docs/web-deployment.md` for exact steps.
 
 ## Current scaffold status
 - App shell and navigation
-- Camera preview screen scaffold
+- Web-first landing page + start assessment flow
+- Camera preview screen scaffold (mobile/web compatible fallback)
 - Pose engine interface + placeholder implementation
 - Push-up and squat detector state machine skeletons
 - Rhythm prompt engine (irregular cadence prompts)
@@ -53,7 +88,7 @@ research/
 
 ## Next integration tasks
 1. Wire real-time camera frames to pose engine
-2. Integrate MediaPipe pose model and landmarks
+2. Integrate MediaPipe pose model and landmarks (web + mobile)
 3. Finalize rep detection thresholds with test clips
 4. Connect exercise events into Flame game controls
 5. Calibrate bio-age mapping with evidence-backed coefficients

@@ -1,0 +1,12 @@
+{
+  "name": "Aevum BioAge",
+  "short_name": "AevumBioAge",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#F4F7FF",
+  "theme_color": "#2962FF",
+  "description": "Aevum BioAge web assessment app",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "icons": []
+}
