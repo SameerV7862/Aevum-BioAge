@@ -362,8 +362,6 @@ class _ProfileInputScreenState extends State<_ProfileInputScreen> {
                     icon: const Icon(Icons.play_arrow),
                     label: const Text('START SESSION'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AevumColors.primary,
-                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
@@ -393,14 +391,14 @@ class _ReadyOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black54,
+      color: AevumColors.surfaceDim.withAlpha(200),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               pipelineActive ? Icons.fitness_center : Icons.videocam_off,
-              size: 64, color: Colors.white70,
+              size: 64, color: AevumColors.primary,
             ),
             const SizedBox(height: 16),
             Text(
@@ -448,12 +446,10 @@ class _GameOverOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final result = bioAgeResult;
     return Container(
-      color: Colors.black54,
+      color: AevumColors.surfaceDim.withAlpha(220),
       child: Center(
         child: SingleChildScrollView(
           child: Card(
-            elevation: 12,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
               child: Column(
@@ -521,7 +517,7 @@ class _GameOverOverlay extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.grey.withAlpha(20), borderRadius: BorderRadius.circular(8),
+                        color: AevumColors.muted, borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text(
                         'Based on ACSM norms & Yang et al. (JAMA, 2019). '
@@ -533,13 +529,9 @@ class _GameOverOverlay extends StatelessWidget {
                   ],
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
-                    onPressed: onRestart,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('PLAY AGAIN'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AevumColors.primary, foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                    ),
+                  onPressed: onRestart,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('PLAY AGAIN'),
                   ),
                 ],
               ),
@@ -577,7 +569,7 @@ class _HudChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(color: Colors.black38, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(color: AevumColors.surfaceDim.withAlpha(200), borderRadius: BorderRadius.circular(16)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, size: 14, color: color),
         const SizedBox(width: 4),
@@ -617,7 +609,7 @@ class _ModeToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(color: Colors.black38, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: AevumColors.surfaceDim.withAlpha(200), borderRadius: BorderRadius.circular(20)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         _toggleBtn('pushup', 'Push-up', mode == 'pushup'),
         _toggleBtn('squat', 'Squat', mode == 'squat'),

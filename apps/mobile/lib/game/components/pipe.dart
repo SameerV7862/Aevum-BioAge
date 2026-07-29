@@ -10,8 +10,8 @@ class PipePair extends PositionComponent with HasGameRef {
   final double pipeWidth;
   bool scored = false;
 
-  static final _pipePaint = ui.Paint()..color = const ui.Color(0xFF388E3C);
-  static final _pipeCapPaint = ui.Paint()..color = const ui.Color(0xFF2E7D32);
+  static final _pipePaint = ui.Paint()..color = const ui.Color(0xFF245684);
+  static final _pipeCapPaint = ui.Paint()..color = const ui.Color(0xFF2B4564);
   static const double _capHeight = 12;
   static const double _capOverhang = 4;
 

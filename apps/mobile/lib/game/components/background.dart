@@ -6,8 +6,8 @@ import 'package:flutter/painting.dart';
 /// Scrolling ground strip at the bottom of the game world.
 class GroundComponent extends PositionComponent with HasGameRef {
   static const double groundHeight = 40;
-  static final _groundPaint = ui.Paint()..color = const Color(0xFF5D4037);
-  static final _grassPaint = ui.Paint()..color = const Color(0xFF66BB6A);
+  static final _groundPaint = ui.Paint()..color = const Color(0xFF0A1A27);
+  static final _grassPaint = ui.Paint()..color = const Color(0xFF245684);
   static const double _grassHeight = 6;
 
   double _scrollOffset = 0;
@@ -32,7 +32,7 @@ class GroundComponent extends PositionComponent with HasGameRef {
 
     // Scrolling texture lines
     final linePaint = ui.Paint()
-      ..color = const Color(0xFF4E342E)
+      ..color = const Color(0xFF1C3654)
       ..strokeWidth = 1;
     const spacing = 24.0;
     final startX = -(_scrollOffset % spacing);
@@ -71,8 +71,8 @@ class SkyBackground extends PositionComponent with HasGameRef {
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
-        Color(0xFF87CEEB), // light sky blue
-        Color(0xFFE0F0FF), // pale horizon
+        Color(0xFF0A1A27), // Aevum dark navy (top)
+        Color(0xFF13314F), // Aevum surface (horizon)
       ],
     );
     canvas.drawRect(rect, ui.Paint()..shader = gradient.createShader(rect));
