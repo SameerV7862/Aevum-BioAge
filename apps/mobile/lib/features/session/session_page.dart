@@ -37,7 +37,6 @@ class _SessionPageState extends State<SessionPage> {
   bool _cameraReady = false;
   bool _pipelineActive = false;
   String _mode = 'pushup';
-  String? _cameraError;
   int _repCount = 0;
   GameState _gameState = GameState.ready;
 
@@ -57,25 +56,25 @@ class _SessionPageState extends State<SessionPage> {
   }
 
   Future<void> _init() async {
-    // Camera init — tolerate failure gracefully
+    // Camera — always attempt init
     try {
       await _cameraService.initialize();
       _cameraReady = _cameraService.controller?.value.isInitialized == true;
     } catch (e) {
-      _cameraError = 'Camera unavailable: $e';
+      debugPrint('Camera unavailable: $e');
       _cameraReady = false;
     }
 
-    // Pose engine init — non-fatal
+    // Pose engine
     try {
       await _pipeline.initialize();
       _pipelineActive = true;
     } catch (e) {
-      debugPrint('Pose engine init failed (non-fatal): $e');
+      debugPrint('Pose engine init failed: $e');
       _pipelineActive = false;
     }
 
-    // Subscribe exercise events → game bridge
+    // Exercise events → game bridge
     _eventSub = _pipeline.events.listen((event) {
       _bridge.onEvent(event);
       if (event is RepCompletedEvent && mounted) {
@@ -83,14 +82,12 @@ class _SessionPageState extends State<SessionPage> {
       }
     });
 
-    // Listen to game events for score updates
+    // Game events for UI updates
     _gameSub = _game.events.listen((event) {
-      if (event == GameEvent.scored && mounted) {
-        setState(() {});
-      }
+      if (event == GameEvent.scored && mounted) setState(() {});
     });
 
-    // Camera frame streaming (mobile only — web reads video element directly)
+    // Start camera frame streaming
     if (_cameraReady && !kIsWeb) {
       _startCameraFrameStream();
     }
@@ -126,15 +123,38 @@ class _SessionPageState extends State<SessionPage> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    final controller = _cameraService.controller;
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Game fills the whole screen
+          // Layer 0: Camera feed (always visible behind game)
+          if (_cameraReady && controller != null && controller.value.isInitialized)
+            SizedBox.expand(
+              child: FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: controller.value.previewSize?.height ?? 480,
+                  height: controller.value.previewSize?.width ?? 640,
+                  child: CameraPreview(controller),
+                ),
+              ),
+            )
+          else
+            const ColoredBox(color: Colors.black),
+
+          // Layer 1: Game (transparent background, pipes/crane/score render on top of camera)
           GameWidget(game: _game),
 
-          // Ready overlay
-          if (_gameState == GameState.ready) _ReadyOverlay(game: _game),
+          // Ready overlay — wait for first push-up
+          if (_gameState == GameState.ready)
+            _ReadyOverlay(
+              pipelineActive: _pipelineActive,
+              cameraReady: _cameraReady,
+              mode: _mode,
+              onModeChanged: _switchMode,
+              onStart: () => _game.startPlaying(),
+            ),
 
           // Game-over overlay
           if (_gameState == GameState.gameOver)
@@ -153,82 +173,30 @@ class _SessionPageState extends State<SessionPage> {
               },
             ),
 
-          // HUD — top bar
+          // HUD during gameplay
           if (_gameState == GameState.playing)
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _HudChip(
-                      icon: Icons.fitness_center,
-                      label: '$_repCount reps',
-                    ),
+                    _HudChip(icon: Icons.fitness_center, label: '$_repCount reps'),
                     const Spacer(),
-                    _HudChip(
-                      icon: _pipelineActive ? Icons.visibility : Icons.visibility_off,
-                      label: _pipelineActive ? 'TRACKING' : 'MANUAL',
-                      color: _pipelineActive ? AevumColors.success : AevumColors.warning,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          // Bottom controls — mode selector + manual buttons
-          if (_gameState == GameState.playing)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: SafeArea(
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withAlpha(120),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _HudChip(
+                          icon: _pipelineActive ? Icons.visibility : Icons.visibility_off,
+                          label: _pipelineActive ? 'TRACKING' : 'NO POSE',
+                          color: _pipelineActive ? AevumColors.success : AevumColors.error,
+                        ),
+                        const SizedBox(height: 4),
+                        _ModeChip(mode: _mode, onTap: () => _switchMode(_mode == 'pushup' ? 'squat' : 'pushup')),
                       ],
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      // Mode toggle
-                      _ModeToggle(
-                        mode: _mode,
-                        onChanged: (m) {
-                          setState(() {
-                            _mode = m;
-                            _repCount = 0;
-                          });
-                          _bridge.reset();
-                          if (_mode == 'pushup') {
-                            _pushupDetector.reset();
-                            _pipeline.setDetector(_pushupDetector);
-                          } else {
-                            _squatDetector.reset();
-                            _pipeline.setDetector(_squatDetector);
-                          }
-                        },
-                      ),
-                      const Spacer(),
-                      // Manual flap/boost for testing
-                      _ActionButton(
-                        label: 'FLAP',
-                        onTap: () => _game.onNormalRep(),
-                        color: AevumColors.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      _ActionButton(
-                        label: 'BOOST',
-                        onTap: () => _game.onDoubleFast(),
-                        color: AevumColors.accent,
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -236,26 +204,56 @@ class _SessionPageState extends State<SessionPage> {
       ),
     );
   }
+
+  void _switchMode(String newMode) {
+    setState(() {
+      _mode = newMode;
+      _repCount = 0;
+    });
+    _bridge.reset();
+    if (_mode == 'pushup') {
+      _pushupDetector.reset();
+      _pipeline.setDetector(_pushupDetector);
+    } else {
+      _squatDetector.reset();
+      _pipeline.setDetector(_squatDetector);
+    }
+  }
 }
 
 // ---------- Overlay widgets ----------
 
 class _ReadyOverlay extends StatelessWidget {
-  final AevumFlappyGame game;
-  const _ReadyOverlay({required this.game});
+  final bool pipelineActive;
+  final bool cameraReady;
+  final String mode;
+  final ValueChanged<String> onModeChanged;
+  final VoidCallback onStart;
+
+  const _ReadyOverlay({
+    required this.pipelineActive,
+    required this.cameraReady,
+    required this.mode,
+    required this.onModeChanged,
+    required this.onStart,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black38,
+      color: Colors.black54,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.touch_app, size: 64, color: Colors.white70),
+            Icon(
+              pipelineActive ? Icons.fitness_center : Icons.videocam_off,
+              size: 64,
+              color: Colors.white70,
+            ),
             const SizedBox(height: 16),
             Text(
-              'TAP TO START',
+              pipelineActive ? 'READY' : 'CAMERA NEEDED',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -264,23 +262,21 @@ class _ReadyOverlay extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Tap screen or do a push-up to flap',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Colors.white70),
+              pipelineActive
+                  ? 'Do a ${mode == 'pushup' ? 'push-up' : 'squat'} to start flying'
+                  : 'Allow camera access to begin pose tracking',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => game.startPlaying(),
-              icon: const Icon(Icons.play_arrow),
-              label: const Text('START'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AevumColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+            // Mode selector
+            _ModeToggle(mode: mode, onChanged: onModeChanged),
+            const SizedBox(height: 16),
+            if (!pipelineActive)
+              Text(
+                'Grant camera permission and reload',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AevumColors.warning),
               ),
-            ),
           ],
         ),
       ),
@@ -314,11 +310,7 @@ class _GameOverOverlay extends StatelessWidget {
               children: [
                 const Text(
                   'GAME OVER',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: AevumColors.error,
-                  ),
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AevumColors.error),
                 ),
                 const SizedBox(height: 20),
                 Row(
@@ -329,18 +321,20 @@ class _GameOverOverlay extends StatelessWidget {
                     _ScoreStat(label: 'REPS', value: '$repCount'),
                   ],
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 16),
+                const Text(
+                  'Do a push-up to play again',
+                  style: TextStyle(color: AevumColors.textSecondary, fontSize: 13),
+                ),
+                const SizedBox(height: 20),
                 ElevatedButton.icon(
                   onPressed: onRestart,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('PLAY AGAIN'),
+                  label: const Text('RESTART'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AevumColors.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 14,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
                   ),
                 ),
               ],
@@ -361,13 +355,8 @@ class _ScoreStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value,
-            style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
-        Text(label,
-            style: const TextStyle(
-                fontSize: 12,
-                color: AevumColors.textSecondary,
-                letterSpacing: 1)),
+        Text(value, style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(fontSize: 12, color: AevumColors.textSecondary, letterSpacing: 1)),
       ],
     );
   }
@@ -377,21 +366,13 @@ class _HudChip extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
-
-  const _HudChip({
-    required this.icon,
-    required this.label,
-    this.color = Colors.white,
-  });
+  const _HudChip({required this.icon, required this.label, this.color = Colors.white});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.black38,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: BoxDecoration(color: Colors.black38, borderRadius: BorderRadius.circular(16)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -399,6 +380,31 @@ class _HudChip extends StatelessWidget {
           const SizedBox(width: 4),
           Text(label, style: TextStyle(color: color, fontSize: 12)),
         ],
+      ),
+    );
+  }
+}
+
+class _ModeChip extends StatelessWidget {
+  final String mode;
+  final VoidCallback onTap;
+  const _ModeChip({required this.mode, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(color: AevumColors.primary.withAlpha(180), borderRadius: BorderRadius.circular(16)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.swap_horiz, size: 14, color: Colors.white),
+            const SizedBox(width: 4),
+            Text(mode == 'pushup' ? 'Push-up' : 'Squat', style: const TextStyle(color: Colors.white, fontSize: 12)),
+          ],
+        ),
       ),
     );
   }
@@ -412,10 +418,7 @@ class _ModeToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.black38,
-        borderRadius: BorderRadius.circular(20),
-      ),
+      decoration: BoxDecoration(color: Colors.black38, borderRadius: BorderRadius.circular(20)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -441,40 +444,6 @@ class _ModeToggle extends StatelessWidget {
             color: active ? Colors.white : Colors.white70,
             fontSize: 12,
             fontWeight: active ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-  final Color color;
-  const _ActionButton({
-    required this.label,
-    required this.onTap,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: color.withAlpha(200),
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
           ),
         ),
       ),

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flame/components.dart';
-import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
@@ -21,8 +20,7 @@ const double _pipeGap = 150.0;
 
 enum GameState { ready, playing, gameOver }
 
-class AevumFlappyGame extends FlameGame
-    with TapCallbacks {
+class AevumFlappyGame extends FlameGame {
   late CraneSpriteComponent crane;
   late PipeSpawner pipeSpawner;
   late GroundComponent ground;
@@ -46,23 +44,18 @@ class AevumFlappyGame extends FlameGame
 
   @override
   Future<void> onLoad() async {
-    // Background layers
     sky = SkyBackground();
     add(sky);
 
     ground = GroundComponent(scrollSpeed: _scrollSpeed);
     add(ground);
 
-    // Score
     scoreDisplay = ScoreDisplay();
     add(scoreDisplay);
 
-    // Crane
-    crane = CraneSpriteComponent()
-      ..anchor = Anchor.center;
+    crane = CraneSpriteComponent()..anchor = Anchor.center;
     add(crane);
 
-    // Pipe spawner
     pipeSpawner = PipeSpawner(
       scrollSpeed: _scrollSpeed,
       gapHeight: _pipeGap,
@@ -83,40 +76,32 @@ class AevumFlappyGame extends FlameGame
   @override
   void update(double dt) {
     super.update(dt);
-
     if (state != GameState.playing) return;
 
-    // Gravity
     _velocityY += _gravity * dt;
     if (_velocityY > _maxFallSpeed) _velocityY = _maxFallSpeed;
     crane.y += _velocityY * dt;
 
-    // Update pipe spawner crane position for scoring
     pipeSpawner.craneX = crane.x;
 
-    // Ceiling clamp
     if (crane.y < 32) {
       crane.y = 32;
       _velocityY = 0;
     }
 
-    // Ground collision
     if (crane.y > ground.topY - 16) {
       crane.y = ground.topY - 16;
       _die();
       return;
     }
 
-    // Pipe collision (AABB check against crane bounds)
     _checkPipeCollisions();
 
-    // Return to idle anim when falling
     if (_velocityY > 0 && crane.animState != CraneAnimState.idle) {
       crane.setAnimState(CraneAnimState.idle);
     }
 
-    // Tilt crane based on velocity
-    crane.angle = (_velocityY / _maxFallSpeed) * 0.5; // subtle rotation
+    crane.angle = (_velocityY / _maxFallSpeed) * 0.5;
   }
 
   void _checkPipeCollisions() {
@@ -128,19 +113,13 @@ class AevumFlappyGame extends FlameGame
 
     for (final child in children) {
       if (child is PipePair) {
-        final topRect = Rect.fromLTWH(
-          child.x,
-          0,
-          child.pipeWidth,
-          child.gapY,
-        );
+        final topRect = Rect.fromLTWH(child.x, 0, child.pipeWidth, child.gapY);
         final bottomRect = Rect.fromLTWH(
           child.x,
           child.gapY + child.gapHeight,
           child.pipeWidth,
           size.y - (child.gapY + child.gapHeight),
         );
-
         if (craneRect.overlaps(topRect) || craneRect.overlaps(bottomRect)) {
           _die();
           return;
@@ -155,23 +134,9 @@ class AevumFlappyGame extends FlameGame
     onStateChanged?.call(state);
   }
 
-  // --- Input handling ---
-
-  @override
-  void onTapDown(TapDownEvent event) {
-    switch (state) {
-      case GameState.ready:
-        startPlaying();
-      case GameState.playing:
-        onNormalRep();
-      case GameState.gameOver:
-        break; // handled by overlay button
-    }
-  }
-
   void startPlaying() {
     state = GameState.playing;
-    _velocityY = _flapImpulse * 0.5; // gentle initial lift
+    _velocityY = _flapImpulse * 0.5;
     onStateChanged?.call(state);
   }
 
@@ -186,7 +151,7 @@ class AevumFlappyGame extends FlameGame
     onStateChanged?.call(state);
   }
 
-  // --- Exercise event inputs ---
+  // --- Exercise-only inputs (no tap) ---
 
   void onNormalRep() {
     if (state == GameState.ready) startPlaying();
@@ -219,4 +184,3 @@ class AevumFlappyGame extends FlameGame
 }
 
 enum GameEvent { flap, glide, boost, scored, died }
-
