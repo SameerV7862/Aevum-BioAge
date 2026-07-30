@@ -9,6 +9,8 @@ class AevumColors {
   static const Color primaryDark = Color(0xFF245684);    // scrollbar-thumb / deeper teal
   static const Color secondary = Color(0xFF8FD0F2);      // --secondary  hsl(211 36% 66%)
   static const Color accent = Color(0xFF63BEE9);         // --accent (same as primary on site)
+  static const Color cream = Color(0xFFF3E8D2);          // warm paper / interior tone
+  static const Color gold = Color(0xFFE4B860);           // warm highlight used sparingly
 
   // Surfaces
   static const Color background = Color(0xFF0D2742);     // body bg
@@ -16,6 +18,7 @@ class AevumColors {
   static const Color surfaceDim = Color(0xFF0A1A27);     // darker panels / overlays
   static const Color border = Color(0xFF2B4564);         // --border
   static const Color muted = Color(0xFF1C3654);          // --muted  hsl(213 50% 22%)
+  static const Color mist = Color(0xFF224D73);           // soft atmospheric mid tone
 
   // Text
   static const Color textPrimary = Color(0xFFFFFFFF);    // --foreground

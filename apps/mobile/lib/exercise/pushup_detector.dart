@@ -23,13 +23,22 @@ PoseLandmark? _lm(PoseFrame frame, String name) {
   return null;
 }
 
-/// Thresholds (degrees) for elbow angle to classify push-up phase.
-const double _elbowDownThreshold = 90.0;
-const double _elbowUpThreshold = 150.0;
+/// Base thresholds; effective thresholds are adapted to observed range.
+const double _elbowDownThreshold = 104.0;
+const double _elbowRecoveryThreshold = 122.0;
+const double _elbowUpThreshold = 146.0;
+const double _elbowDescendingTrigger = 136.0;
+const int _repCooldownMs = 320;
+const int _minRepDurationMs = 420;
 
 class PushupDetector implements ExerciseDetector {
   PushupState _state = PushupState.up;
   DateTime? _downStart;
+  DateTime? _cycleStart;
+  DateTime? _lastRepTime;
+  double? _smoothedAngle;
+  double _observedTop = 160.0;
+  double _observedBottom = 96.0;
 
   @override
   List<ExerciseEvent> update(PoseFrame frame) {
@@ -61,21 +70,38 @@ class PushupDetector implements ExerciseDetector {
 
     if (elbowAngle == null) return events;
 
+    final rawAngle = elbowAngle;
+    _smoothedAngle = _smoothedAngle == null
+        ? rawAngle
+        : (_smoothedAngle! + (rawAngle - _smoothedAngle!) * 0.32);
+    final angle = _smoothedAngle!;
+
+    _observedTop = (_observedTop * 0.98) + (angle * 0.02);
+    _observedBottom = (_observedBottom * 0.98) + (angle * 0.02);
+    if (angle > _observedTop) _observedTop = angle;
+    if (angle < _observedBottom) _observedBottom = angle;
+
+    final dynamicDescendingTrigger = (_observedTop - 14).clamp(128.0, 148.0);
+    final dynamicDownThreshold = (_observedTop - 40).clamp(88.0, 118.0);
+    final dynamicRecoveryThreshold = (dynamicDownThreshold + 12).clamp(104.0, 132.0);
+    final dynamicUpThreshold = (_observedTop - 6).clamp(132.0, 154.0);
+
     switch (_state) {
       case PushupState.up:
-        if (elbowAngle < _elbowDownThreshold) {
+        if (angle < dynamicDescendingTrigger) {
           _state = PushupState.descending;
+          _cycleStart = frame.timestamp;
         }
       case PushupState.descending:
-        if (elbowAngle < _elbowDownThreshold) {
+        if (angle < dynamicDownThreshold) {
           _state = PushupState.down;
           _downStart = frame.timestamp;
-        } else if (elbowAngle > _elbowUpThreshold) {
+        } else if (angle > dynamicUpThreshold) {
           // Went back up without reaching bottom
           _state = PushupState.up;
         }
       case PushupState.down:
-        if (elbowAngle > _elbowUpThreshold) {
+        if (angle > dynamicRecoveryThreshold) {
           _state = PushupState.ascending;
           if (_downStart != null) {
             final hold = frame.timestamp.difference(_downStart!);
@@ -89,10 +115,20 @@ class PushupDetector implements ExerciseDetector {
           }
         }
       case PushupState.ascending:
-        if (elbowAngle > _elbowUpThreshold) {
+        if (angle > dynamicUpThreshold) {
+          final durationOk = _cycleStart == null
+              ? true
+              : frame.timestamp.difference(_cycleStart!).inMilliseconds >= _minRepDurationMs;
+          final cooldownOk = _lastRepTime == null
+              ? true
+              : frame.timestamp.difference(_lastRepTime!).inMilliseconds >= _repCooldownMs;
+
           _state = PushupState.up;
-          events.add(RepCompletedEvent(frame.timestamp, type: 'pushup'));
-        } else if (elbowAngle < _elbowDownThreshold) {
+          if (durationOk && cooldownOk) {
+            _lastRepTime = frame.timestamp;
+            events.add(RepCompletedEvent(frame.timestamp, type: 'pushup'));
+          }
+        } else if (angle < dynamicDownThreshold) {
           _state = PushupState.down;
           _downStart = frame.timestamp;
         }
@@ -105,5 +141,10 @@ class PushupDetector implements ExerciseDetector {
   void reset() {
     _state = PushupState.up;
     _downStart = null;
+    _cycleStart = null;
+    _lastRepTime = null;
+    _smoothedAngle = null;
+    _observedTop = 160.0;
+    _observedBottom = 96.0;
   }
 }

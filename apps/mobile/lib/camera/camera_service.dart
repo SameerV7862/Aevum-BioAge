@@ -1,5 +1,6 @@
-import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
+
+import 'camera_stub.dart';
 
 class CameraService {
   CameraController? _controller;

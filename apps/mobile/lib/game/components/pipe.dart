@@ -80,11 +80,14 @@ class PipeSpawner extends Component with HasGameRef {
 
   double _timeSinceSpawn = 0;
   final List<PipePair> _pipes = [];
+  bool scoringEnabled = false;
+  bool active = false;
+  bool autoSpawn = true;
 
   PipeSpawner({
     this.scrollSpeed = 120,
     this.gapHeight = 160,
-    this.spawnInterval = 2.2,
+    this.spawnInterval = 3.05,
   });
 
   /// Callback when crane passes a pipe — game increments score.
@@ -93,22 +96,44 @@ class PipeSpawner extends Component with HasGameRef {
   /// The x-position of the crane (for scoring checks).
   double craneX = 0;
 
+  PipeAssistTarget? nextAssistTarget(double birdX) {
+    PipePair? nearest;
+    var bestDistance = double.infinity;
+
+    for (final pipe in _pipes) {
+      final distance = pipe.x - birdX;
+      if (distance < -pipe.pipeWidth) continue;
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        nearest = pipe;
+      }
+    }
+
+    if (nearest == null) return null;
+    return PipeAssistTarget(
+      gapCenterY: nearest.gapY + nearest.gapHeight / 2,
+      distanceX: bestDistance,
+    );
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
 
-    _timeSinceSpawn += dt;
-    if (_timeSinceSpawn >= spawnInterval) {
-      _timeSinceSpawn = 0;
-      _spawnPipe();
+    if (autoSpawn) {
+      _timeSinceSpawn += dt;
+      if (_timeSinceSpawn >= spawnInterval) {
+        _timeSinceSpawn = 0;
+        _spawnPipe();
+      }
     }
 
     // Move pipes and check for scoring / removal
     for (final pipe in _pipes.toList()) {
       pipe.x -= scrollSpeed * dt;
 
-      // Score when crane passes the right edge of a pipe
-      if (!pipe.scored && pipe.x + pipe.pipeWidth < craneX) {
+      // Score only once the round is active and the bird has passed the pipe.
+      if (active && scoringEnabled && !pipe.scored && pipe.x + pipe.pipeWidth < craneX - 6) {
         pipe.scored = true;
         onScored?.call();
       }
@@ -123,16 +148,23 @@ class PipeSpawner extends Component with HasGameRef {
 
   void _spawnPipe() {
     final gameHeight = gameRef.size.y;
-    final minGapY = 60.0;
-    final maxGapY = gameHeight - gapHeight - 60;
+    final minGapY = 84.0;
+    final maxGapY = gameHeight - gapHeight - 92;
     if (maxGapY <= minGapY) return;
 
-    final gapY = minGapY + _rng.nextDouble() * (maxGapY - minGapY);
+    final raw = _rng.nextDouble();
+    // Slight center bias trims unreachable extremes while keeping variety.
+    final centered = 0.5 + ((raw - 0.5) * 0.60);
+    final gapY = minGapY + centered * (maxGapY - minGapY);
     final pipe = PipePair(gapY: gapY, gapHeight: gapHeight)
       ..position = Vector2(gameRef.size.x + 10, 0);
 
     _pipes.add(pipe);
     gameRef.add(pipe);
+  }
+
+  void spawnOnePipe() {
+    _spawnPipe();
   }
 
   void reset() {
@@ -141,5 +173,15 @@ class PipeSpawner extends Component with HasGameRef {
     }
     _pipes.clear();
     _timeSinceSpawn = 0;
+    active = false;
+    scoringEnabled = false;
+    autoSpawn = true;
   }
+}
+
+class PipeAssistTarget {
+  final double gapCenterY;
+  final double distanceX;
+
+  const PipeAssistTarget({required this.gapCenterY, required this.distanceX});
 }

@@ -4,78 +4,101 @@ import 'package:flame/components.dart';
 import 'package:flame/sprite.dart';
 import 'package:flutter/material.dart';
 
+import '../../theme/aevum_colors.dart';
+
 /// Animation states for the Aevum crane character.
 enum CraneAnimState { idle, flap, glide, boost }
 
 /// Draws a single crane frame onto a [Canvas].
 ///
 /// The crane is rendered programmatically so no external asset file is needed.
-/// Each frame is 64×64 pixels. [wingPhase] (0.0–1.0) controls wing angle.
+/// The design uses sharper, folded planes to echo the paper-heron mark used
+/// throughout the Aevum website.
 void _drawCraneFrame(Canvas canvas, Size size, double wingPhase, Color bodyColor) {
   final cx = size.width / 2;
   final cy = size.height / 2;
 
-  // Body – elongated ellipse
+  final flutter = (wingPhase - 0.5) * 16;
   final bodyPaint = Paint()..color = bodyColor;
-  canvas.drawOval(
-    Rect.fromCenter(center: Offset(cx, cy), width: 36, height: 16),
-    bodyPaint,
-  );
-
-  // Head
-  canvas.drawCircle(Offset(cx + 18, cy - 4), 7, bodyPaint);
-
-  // Eye
-  final eyePaint = Paint()..color = const Color(0xFF1A1A1A);
-  canvas.drawCircle(Offset(cx + 20, cy - 6), 2, eyePaint);
-
-  // Beak
-  final beakPaint = Paint()..color = const Color(0xFFFF6D00);
-  final beakPath = ui.Path()
-    ..moveTo(cx + 25, cy - 4)
-    ..lineTo(cx + 34, cy - 3)
-    ..lineTo(cx + 25, cy - 1)
-    ..close();
-  canvas.drawPath(beakPath, beakPaint);
-
-  // Wing – rotates based on wingPhase
-  final wingPaint = Paint()..color = bodyColor.withAlpha(200);
-  final wingAngle = -0.5 + wingPhase * 1.0; // radians range
-  canvas.save();
-  canvas.translate(cx - 2, cy);
-  canvas.rotate(wingAngle);
-  canvas.drawOval(
-    Rect.fromCenter(center: const Offset(0, -8), width: 22, height: 8),
-    wingPaint,
-  );
-  canvas.restore();
-
-  // Tail feathers
-  final tailPaint = Paint()
-    ..color = bodyColor.withAlpha(180)
-    ..strokeWidth = 2
-    ..style = PaintingStyle.stroke;
-  canvas.drawLine(Offset(cx - 18, cy), Offset(cx - 26, cy - 4), tailPaint);
-  canvas.drawLine(Offset(cx - 18, cy), Offset(cx - 28, cy), tailPaint);
-  canvas.drawLine(Offset(cx - 18, cy), Offset(cx - 26, cy + 4), tailPaint);
-
-  // Legs (tucked in flight – short stubs)
-  final legPaint = Paint()
-    ..color = const Color(0xFF5D4037)
+  final shadowPaint = Paint()..color = const Color(0xFFDCCEB6);
+  final outlinePaint = Paint()
+    ..color = const Color(0xFF0C1A27)
+    ..style = PaintingStyle.stroke
     ..strokeWidth = 1.5;
-  canvas.drawLine(Offset(cx - 4, cy + 8), Offset(cx - 6, cy + 14), legPaint);
-  canvas.drawLine(Offset(cx + 4, cy + 8), Offset(cx + 2, cy + 14), legPaint);
+  final foldPaint = Paint()
+    ..color = AevumColors.gold.withAlpha(190)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.1;
 
-  // Red crown mark (Aevum crane identity)
-  final crownPaint = Paint()..color = const Color(0xFFD32F2F);
-  canvas.drawCircle(Offset(cx + 18, cy - 10), 3, crownPaint);
+  final leftWing = ui.Path()
+    ..moveTo(cx - 2, cy)
+    ..lineTo(cx - 25, cy - 10 - flutter)
+    ..lineTo(cx - 10, cy + 3)
+    ..close();
+  final rightWing = ui.Path()
+    ..moveTo(cx + 1, cy - 1)
+    ..lineTo(cx + 24, cy - 12 + flutter * 0.8)
+    ..lineTo(cx + 9, cy + 4)
+    ..close();
+  canvas.drawPath(leftWing, shadowPaint);
+  canvas.drawPath(rightWing, bodyPaint);
+  canvas.drawPath(leftWing, outlinePaint);
+  canvas.drawPath(rightWing, outlinePaint);
+
+  final bodyPath = ui.Path()
+    ..moveTo(cx - 10, cy + 4)
+    ..lineTo(cx - 2, cy - 4)
+    ..lineTo(cx + 12, cy + 1)
+    ..lineTo(cx + 3, cy + 11)
+    ..close();
+  canvas.drawPath(bodyPath, bodyPaint);
+  canvas.drawPath(bodyPath, outlinePaint);
+
+  final neckPath = ui.Path()
+    ..moveTo(cx + 8, cy - 2)
+    ..lineTo(cx + 15, cy - 16)
+    ..lineTo(cx + 19, cy - 13)
+    ..lineTo(cx + 12, cy)
+    ..close();
+  canvas.drawPath(neckPath, bodyPaint);
+  canvas.drawPath(neckPath, outlinePaint);
+
+  final headPath = ui.Path()
+    ..moveTo(cx + 16, cy - 17)
+    ..lineTo(cx + 22, cy - 18)
+    ..lineTo(cx + 19, cy - 12)
+    ..close();
+  canvas.drawPath(headPath, bodyPaint);
+  canvas.drawPath(headPath, outlinePaint);
+
+  final beakPath = ui.Path()
+    ..moveTo(cx + 22, cy - 18)
+    ..lineTo(cx + 31, cy - 20)
+    ..lineTo(cx + 21, cy - 15)
+    ..close();
+  canvas.drawPath(beakPath, Paint()..color = AevumColors.gold);
+
+  final tailPath = ui.Path()
+    ..moveTo(cx - 11, cy + 5)
+    ..lineTo(cx - 24, cy + 11)
+    ..lineTo(cx - 12, cy)
+    ..close();
+  canvas.drawPath(tailPath, Paint()..color = const Color(0xFF132B44));
+  canvas.drawPath(tailPath, outlinePaint);
+
+  canvas.drawLine(Offset(cx - 1, cy - 4), Offset(cx + 9, cy + 8), foldPaint);
+  canvas.drawLine(Offset(cx + 8, cy - 2), Offset(cx + 15, cy - 15), foldPaint);
+  canvas.drawLine(Offset(cx - 8, cy + 3), Offset(cx - 18, cy - 4 - flutter * 0.4), foldPaint);
+
+  final eyePaint = Paint()..color = const Color(0xFF08121D);
+  canvas.drawCircle(Offset(cx + 18, cy - 16), 1.2, eyePaint);
 }
 
 /// Generates a sprite sheet image with [frameCount] animation frames.
 Future<ui.Image> generateCraneSpriteSheet({
   int frameCount = 6,
   double frameSize = 64,
-  Color bodyColor = const Color(0xFFF5F5F5), // off-white crane
+  Color bodyColor = AevumColors.cream,
 }) async {
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
@@ -103,6 +126,7 @@ class CraneSpriteComponent extends SpriteAnimationComponent with HasGameRef {
   CraneSpriteComponent() : super(size: Vector2(64, 64));
 
   CraneAnimState _animState = CraneAnimState.idle;
+  late final SpriteSheet _sheet;
   late final SpriteAnimation _idleAnim;
   late final SpriteAnimation _flapAnim;
   late final SpriteAnimation _glideAnim;
@@ -113,15 +137,23 @@ class CraneSpriteComponent extends SpriteAnimationComponent with HasGameRef {
   @override
   Future<void> onLoad() async {
     final image = await generateCraneSpriteSheet();
-    final sheet = SpriteSheet(image: image, srcSize: Vector2(64, 64));
+    _sheet = SpriteSheet(image: image, srcSize: Vector2(64, 64));
 
     // Build animations from the 6-frame sheet (indices 0–5) at different speeds
-    _idleAnim = sheet.createAnimation(row: 0, stepTime: 0.25, from: 1, to: 3);
-    _flapAnim = sheet.createAnimation(row: 0, stepTime: 0.06, from: 0, to: 5);
-    _glideAnim = sheet.createAnimation(row: 0, stepTime: 0.4, from: 2, to: 3);
-    _boostAnim = sheet.createAnimation(row: 0, stepTime: 0.04, from: 0, to: 5);
+    _idleAnim = _buildAnimation(from: 1, to: 3, stepTime: 0.25);
+    _flapAnim = _buildAnimation(from: 0, to: 5, stepTime: 0.06);
+    _glideAnim = _buildAnimation(from: 2, to: 3, stepTime: 0.4);
+    _boostAnim = _buildAnimation(from: 0, to: 5, stepTime: 0.04);
 
     animation = _idleAnim;
+  }
+
+  SpriteAnimation _buildAnimation({
+    required int from,
+    required int to,
+    required double stepTime,
+  }) {
+    return _sheet.createAnimation(row: 0, stepTime: stepTime, from: from, to: to);
   }
 
   void setAnimState(CraneAnimState state) {
@@ -130,13 +162,16 @@ class CraneSpriteComponent extends SpriteAnimationComponent with HasGameRef {
     switch (state) {
       case CraneAnimState.idle:
         animation = _idleAnim;
+        break;
       case CraneAnimState.flap:
         animation = _flapAnim;
+        break;
       case CraneAnimState.glide:
         animation = _glideAnim;
+        break;
       case CraneAnimState.boost:
         animation = _boostAnim;
+        break;
     }
-    animation?.reset();
   }
 }

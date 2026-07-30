@@ -51,29 +51,23 @@ class BioAgeResult {
   });
 }
 
-/// Evidence-based biological age estimator using push-up / squat performance.
+/// Evidence-based biological age estimator using game performance.
 ///
 /// ### Scientific basis
-///
-/// **Push-ups:**
-/// Yang J, et al. "Association Between Push-up Exercise Capacity and Future
-/// Cardiovascular Events Among Active Adult Men." JAMA Network Open, 2019.
-/// doi:10.1001/jamanetworkopen.2018.8341
-/// — Men completing >40 push-ups had 96% lower CVD risk vs <10 push-ups.
 ///
 /// **Fitness age as biomarker:**
 /// Frontiers in Physiology, 2023. "A novel estimate of biological aging by
 /// multiple fitness assessments." doi:10.3389/fphys.2023.1164943
-/// — Composite fitness score (incl. push-ups, squats) correlates with CVD
+/// — Composite fitness score correlates with CVD
 ///   risk, diabetes risk, and epigenetic age clocks.
 ///
-/// **Norm tables:**
-/// ACSM Guidelines for Exercise Testing and Prescription, 11th ed.
-/// Push-up percentile norms stratified by age decade and sex.
+/// **Game adaptation:**
+/// Pipes-cleared score and consistency are mapped to age-banded movement
+/// capacity norms tuned for current spacing/difficulty settings.
 ///
 /// ### Method
-/// 1. Look up the user's expected "average" rep count for their age/sex.
-/// 2. Compare actual reps to the age-decade norm curve to find which age
+/// 1. Look up the user's expected "average" pipe-clear score for age/sex.
+/// 2. Compare actual score to the age-decade norm curve to find which age
 ///    decade the performance corresponds to ("fitness age").
 /// 3. Blend fitness age with modifiers for cadence consistency, fatigue
 ///    resistance, and hold endurance.
@@ -82,33 +76,55 @@ class BioAgeEstimator {
   const BioAgeEstimator();
 
   BioAgeResult estimate(BioAgeInputFeatures f, UserProfile profile) {
-    final norms = profile.sex == 'female' ? _femaleNorms : _maleNorms;
-    final reps = f.totalValidReps;
+    final norms = profile.sex == 'female' ? _femaleScoreNorms : _maleScoreNorms;
+    final clearedPipes = f.totalValidReps;
 
-    // Step 1: Find which age-decade the rep count maps to
-    final fitnessAge = _repCountToFitnessAge(reps, norms);
+  // A single repetition test should not be treated as a direct age clock.
+  // Yang et al. (JAMA Netw Open, 2019) reported push-up capacity as a risk
+  // discriminator in broad categories, while Manca et al. (Front Physiol,
+  // 2023) built fitness-age from multiple functional tests. We therefore
+  // shrink the rep-matched age strongly back toward chronological age and let
+  // session-quality modifiers contribute only modestly.
+    final scoreMatchedAge = _scoreToFitnessAge(clearedPipes, norms);
+    final rawScoreAgeShift = (scoreMatchedAge - profile.chronologicalAge) * 0.18;
 
-    // Step 2: Modifiers (each shifts bio-age estimate by up to ±3 years)
-    // Cadence consistency: low CV = steady pacing = better fitness
-    final cadenceBonus = ((0.5 - f.cadenceCv) * 6).clamp(-3.0, 3.0);
-    // Fatigue resistance: negative slope (speeding up) is excellent
-    final fatigueBonus = (-f.fatigueSlope * 4).clamp(-3.0, 3.0);
-    // Hold endurance: sustained isometric holds indicate control
-    final holdBonus = (f.maxHoldSeconds * 0.8).clamp(0.0, 3.0);
+    // Difficulty guardrail:
+    // - Mid-range runs (like 6 clears at current tuning) should be near-neutral.
+    // - Very low scores still add some age penalty.
+    // - High scores can still reduce estimated age.
+    final scoreAgeShift = rawScoreAgeShift < 0
+      ? rawScoreAgeShift.clamp(-5.0, 0.0)
+      : _lowScorePenalty(clearedPipes, rawScoreAgeShift);
+  final cadenceAdjustment = ((0.35 - f.cadenceCv) * 2.0).clamp(-1.0, 1.0);
+  final fatigueAdjustment = (-f.fatigueSlope * 1.5).clamp(-1.0, 1.0);
+  final holdAdjustment = (f.maxHoldSeconds / 3.0).clamp(0.0, 1.0) * 0.75;
+  final consistencyAdjustment =
+    ((f.romConsistency - 0.6) * 1.5).clamp(-0.75, 0.75);
+    final trackingPenalty =
+      ((0.55 - f.trackingQuality) * 1.8).clamp(0.0, 1.2);
 
-    final rawBioAge = fitnessAge - cadenceBonus - fatigueBonus - holdBonus;
-    final bioAge = rawBioAge.clamp(18.0, 90.0);
+  final rawBioAge = profile.chronologicalAge +
+    scoreAgeShift -
+    cadenceAdjustment -
+    fatigueAdjustment -
+    holdAdjustment -
+    consistencyAdjustment +
+    trackingPenalty;
+  final bioAge = rawBioAge
+    .clamp(profile.chronologicalAge - 8.0, profile.chronologicalAge + 8.0)
+    .clamp(18.0, 90.0)
+    .toDouble();
 
     // Step 3: Confidence band based on data quality
     final quality = f.trackingQuality;
     final sessionMinutes = f.sessionDuration.inSeconds / 60.0;
     final dataQuality = (quality * 0.7 + (sessionMinutes / 3.0).clamp(0, 1) * 0.3);
-    final band = dataQuality > 0.7 ? 3.0 : dataQuality > 0.4 ? 5.0 : 8.0;
+    final band = dataQuality > 0.7 ? 4.0 : dataQuality > 0.4 ? 6.0 : 8.0;
     final reliability = dataQuality > 0.7 ? 'high' : dataQuality > 0.4 ? 'medium' : 'low';
 
     // Step 4: Percentile label relative to chronological age norms
-    final expectedAvg = _averageRepsForAge(profile.chronologicalAge, norms);
-    final percentileLabel = _percentileLabel(reps, expectedAvg);
+    final expectedAvg = _averageScoreForAge(profile.chronologicalAge, norms);
+    final percentileLabel = _percentileLabel(clearedPipes, expectedAvg);
 
     return BioAgeResult(
       estimatedBioAge: bioAge.roundToDouble(),
@@ -121,66 +137,71 @@ class BioAgeEstimator {
     );
   }
 
-  /// Interpolate rep count onto the age-norm curve to get "fitness age".
-  double _repCountToFitnessAge(int reps, List<_AgeNorm> norms) {
-    // If reps exceed the youngest norm, return youngest age
-    if (reps >= norms.first.avgReps) return norms.first.age.toDouble();
-    // If reps below the oldest norm, return oldest age
-    if (reps <= norms.last.avgReps) return norms.last.age.toDouble();
+  /// Interpolate score onto the age-norm curve to get "fitness age".
+  double _scoreToFitnessAge(int score, List<_AgeNorm> norms) {
+    // If score exceeds the youngest norm, return youngest age.
+    if (score >= norms.first.avgScore) return norms.first.age.toDouble();
+    // If score is below the oldest norm, return oldest age.
+    if (score <= norms.last.avgScore) return norms.last.age.toDouble();
 
     for (var i = 0; i < norms.length - 1; i++) {
       final young = norms[i];
       final old = norms[i + 1];
-      if (reps <= young.avgReps && reps >= old.avgReps) {
+      if (score <= young.avgScore && score >= old.avgScore) {
         // Linear interpolation between age decades
-        final t = (young.avgReps - reps) / (young.avgReps - old.avgReps);
+        final t = (young.avgScore - score) / (young.avgScore - old.avgScore);
         return young.age + t * (old.age - young.age);
       }
     }
     return norms.last.age.toDouble();
   }
 
-  double _averageRepsForAge(int age, List<_AgeNorm> norms) {
+  double _averageScoreForAge(int age, List<_AgeNorm> norms) {
     for (var i = 0; i < norms.length - 1; i++) {
       if (age <= norms[i].age) continue;
       if (age >= norms[i + 1].age) continue;
       final t = (age - norms[i].age) / (norms[i + 1].age - norms[i].age);
-      return norms[i].avgReps + t * (norms[i + 1].avgReps - norms[i].avgReps);
+      return norms[i].avgScore + t * (norms[i + 1].avgScore - norms[i].avgScore);
     }
-    if (age <= norms.first.age) return norms.first.avgReps.toDouble();
-    return norms.last.avgReps.toDouble();
+    if (age <= norms.first.age) return norms.first.avgScore.toDouble();
+    return norms.last.avgScore.toDouble();
   }
 
-  String _percentileLabel(int reps, double expectedAvg) {
-    final ratio = expectedAvg > 0 ? reps / expectedAvg : 1.0;
-    if (ratio >= 1.6) return 'Excellent';
-    if (ratio >= 1.3) return 'Above Average';
+  String _percentileLabel(int score, double expectedAvg) {
+    final ratio = expectedAvg > 0 ? score / expectedAvg : 1.0;
+    if (ratio >= 1.5) return 'Excellent';
+    if (ratio >= 1.25) return 'Above Average';
     if (ratio >= 0.85) return 'Average';
     if (ratio >= 0.6) return 'Below Average';
     return 'Needs Improvement';
   }
 }
 
-class _AgeNorm {
-  final int age;
-  final int avgReps; // ACSM "average" category midpoint
-  const _AgeNorm(this.age, this.avgReps);
+double _lowScorePenalty(int score, double rawShift) {
+  if (score >= 7) return 0.0;
+  final severity = ((7 - score) / 4.0).clamp(0.0, 1.0);
+  return (rawShift * severity).clamp(0.0, 2.0);
 }
 
-/// ACSM push-up norms — male (average category midpoint per decade).
-const _maleNorms = [
-  _AgeNorm(25, 22),  // 20-29: avg 20-24
-  _AgeNorm(35, 17),  // 30-39: avg 15-19
-  _AgeNorm(45, 15),  // 40-49: avg 13-17
-  _AgeNorm(55, 12),  // 50-59: avg 10-14
-  _AgeNorm(65, 8),   // 60+:   avg 6-9
+class _AgeNorm {
+  final int age;
+  final int avgScore;
+  const _AgeNorm(this.age, this.avgScore);
+}
+
+/// Score norms tuned for current game spacing/assist settings.
+const _maleScoreNorms = [
+  _AgeNorm(25, 16),
+  _AgeNorm(35, 13),
+  _AgeNorm(45, 10),
+  _AgeNorm(55, 8),
+  _AgeNorm(65, 6),
 ];
 
-/// ACSM push-up norms — female (average category midpoint per decade).
-const _femaleNorms = [
-  _AgeNorm(25, 14),  // 20-29: avg 12-15
-  _AgeNorm(35, 11),  // 30-39: avg 9-12
-  _AgeNorm(45, 8),   // 40-49: avg 7-9
-  _AgeNorm(55, 6),   // 50-59: avg 5-7
-  _AgeNorm(65, 4),   // 60+:   avg 3-4
+const _femaleScoreNorms = [
+  _AgeNorm(25, 14),
+  _AgeNorm(35, 11),
+  _AgeNorm(45, 9),
+  _AgeNorm(55, 7),
+  _AgeNorm(65, 5),
 ];
