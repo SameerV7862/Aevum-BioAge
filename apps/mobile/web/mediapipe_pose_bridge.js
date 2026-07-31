@@ -18,6 +18,7 @@ window.AevumPoseBridge = (() => {
   let lastCameraError = null;
   let previewContainer = null;
   let previewLayout = "hidden";
+  let previewLayoutListenerBound = false;
   let audioContext = null;
   let masterGain = null;
   let musicGain = null;
@@ -246,6 +247,7 @@ window.AevumPoseBridge = (() => {
     container.style.pointerEvents = "none";
 
     applyPreviewLayout(container);
+    ensurePreviewLayoutListener();
 
     previewContainer = container;
     return container;
@@ -253,6 +255,23 @@ window.AevumPoseBridge = (() => {
 
   function applyPreviewLayout(container) {
     if (!container) return;
+
+    const viewportWidth = Math.max(
+      320,
+      Math.round((window.visualViewport && window.visualViewport.width) || window.innerWidth || 0),
+    );
+    const safeTop = Math.max(
+      0,
+      (window.visualViewport ? window.visualViewport.offsetTop : 0) || 0,
+    );
+    const safeRight = Math.max(
+      0,
+      window.innerWidth -
+        (((window.visualViewport && window.visualViewport.offsetLeft) || 0) +
+          ((window.visualViewport && window.visualViewport.width) || window.innerWidth)),
+    );
+    const topPad = `${Math.round(12 + safeTop)}px`;
+    const rightPad = `${Math.round(12 + safeRight)}px`;
 
     if (previewLayout === "hidden") {
       container.style.display = "none";
@@ -267,29 +286,48 @@ window.AevumPoseBridge = (() => {
       container.style.right = "auto";
       container.style.bottom = "auto";
       container.style.transform = "translate(-50%, -50%)";
-      container.style.width = window.innerWidth < 640 ? "230px" : "420px";
-      container.style.height = window.innerWidth < 640 ? "320px" : "560px";
+      container.style.width = viewportWidth < 640 ? "min(68vw, 250px)" : "420px";
+      container.style.height = viewportWidth < 640 ? "min(46vh, 340px)" : "560px";
       return;
     }
 
     if (previewLayout === "ready") {
       container.style.left = "50%";
-      container.style.top = window.innerWidth < 640 ? "30%" : "28%";
+      container.style.top = viewportWidth < 640 ? "30%" : "28%";
       container.style.right = "auto";
       container.style.bottom = "auto";
       container.style.transform = "translate(-50%, -50%)";
-      container.style.width = window.innerWidth < 640 ? "210px" : "360px";
-      container.style.height = window.innerWidth < 640 ? "290px" : "500px";
+      container.style.width = viewportWidth < 640 ? "min(62vw, 230px)" : "360px";
+      container.style.height = viewportWidth < 640 ? "min(40vh, 300px)" : "500px";
       return;
     }
 
     container.style.left = "auto";
-    container.style.top = "16px";
-    container.style.right = "16px";
+    container.style.top = topPad;
+    container.style.right = rightPad;
     container.style.bottom = "auto";
     container.style.transform = "none";
-    container.style.width = window.innerWidth < 640 ? "176px" : "300px";
-    container.style.height = window.innerWidth < 640 ? "235px" : "400px";
+    container.style.width = viewportWidth < 640 ? "min(44vw, 176px)" : "300px";
+    container.style.height = viewportWidth < 640 ? "min(30vh, 235px)" : "400px";
+  }
+
+  function ensurePreviewLayoutListener() {
+    if (previewLayoutListenerBound) return;
+
+    const refreshPreviewLayout = () => {
+      if (previewContainer) {
+        applyPreviewLayout(previewContainer);
+      }
+    };
+
+    window.addEventListener("resize", refreshPreviewLayout, { passive: true });
+    window.addEventListener("orientationchange", refreshPreviewLayout, { passive: true });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", refreshPreviewLayout, { passive: true });
+      window.visualViewport.addEventListener("scroll", refreshPreviewLayout, { passive: true });
+    }
+
+    previewLayoutListenerBound = true;
   }
 
   function setPreviewLayout(layout) {

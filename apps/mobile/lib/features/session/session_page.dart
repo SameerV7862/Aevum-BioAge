@@ -755,39 +755,63 @@ class _SessionPageState extends State<SessionPage> {
               left: 16,
               right: 16,
               child: SafeArea(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.white24),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth < 430;
+                    return Flex(
+                      direction: compact ? Axis.vertical : Axis.horizontal,
+                      crossAxisAlignment: compact ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
+                      children: [
+                        if (compact)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.white24),
+                            ),
+                            child: const Text(
+                              'Calibration demo: clear one pipe to auto-start the game.',
+                              style: TextStyle(color: Colors.white, fontSize: 12, height: 1.35),
+                            ),
+                          )
+                        else
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.black54,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: Colors.white24),
+                              ),
+                              child: const Text(
+                                'Calibration demo: clear one pipe to auto-start the game.',
+                                style: TextStyle(color: Colors.white, fontSize: 12, height: 1.35),
+                              ),
+                            ),
+                          ),
+                        SizedBox(width: compact ? 0 : 10, height: compact ? 8 : 0),
+                        Align(
+                          alignment: compact ? Alignment.centerRight : Alignment.center,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: Colors.white24),
+                            ),
+                            child: TextButton.icon(
+                              onPressed: _exitCalibration,
+                              icon: const Icon(Icons.close, color: Colors.white, size: 16),
+                              label: const Text(
+                                'EXIT CALIBRATION',
+                                style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ),
                         ),
-                        child: const Text(
-                          'Calibration demo: clear one pipe to auto-start the game.',
-                          style: TextStyle(color: Colors.white, fontSize: 12, height: 1.35),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: TextButton.icon(
-                        onPressed: _exitCalibration,
-                        icon: const Icon(Icons.close, color: Colors.white, size: 16),
-                        label: const Text(
-                          'EXIT CALIBRATION',
-                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ),
-                  ],
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -1138,6 +1162,13 @@ class _ReadyOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final compact = screenWidth < 430;
+    final cardPadding = compact
+        ? const EdgeInsets.symmetric(horizontal: 16, vertical: 14)
+        : const EdgeInsets.symmetric(horizontal: 28, vertical: 26);
+    final buttonWidth = compact ? double.infinity : 240.0;
+
     return Container(
       color: AevumColors.surfaceDim.withAlpha(92),
       child: SafeArea(
@@ -1145,10 +1176,10 @@ class _ReadyOverlay extends StatelessWidget {
           children: [
             const Spacer(),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 16, vertical: compact ? 8 : 12),
               child: Card(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 26),
+                  padding: cardPadding,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1221,7 +1252,7 @@ class _ReadyOverlay extends StatelessWidget {
                 const SizedBox(height: 16),
                 if (!cameraReady) ...[
                   SizedBox(
-                    width: 240,
+                    width: buttonWidth,
                     child: FilledButton.icon(
                       onPressed: cameraRequestInFlight ? null : () => onRequestCamera(),
                       style: FilledButton.styleFrom(
@@ -1281,7 +1312,7 @@ class _ReadyOverlay extends StatelessWidget {
                   const SizedBox(height: 12),
                 ],
                 SizedBox(
-                  width: 240,
+                  width: buttonWidth,
                   child: FilledButton.icon(
                     onPressed: cameraReady && !calibrationActive && countdownSeconds == 0 ? onStart : null,
                     style: FilledButton.styleFrom(
@@ -1311,7 +1342,7 @@ class _ReadyOverlay extends StatelessWidget {
                 if (calibrationActive) ...[
                   const SizedBox(height: 10),
                   SizedBox(
-                    width: 240,
+                    width: buttonWidth,
                     child: OutlinedButton.icon(
                       onPressed: onExitCalibration,
                       icon: const Icon(Icons.close),
