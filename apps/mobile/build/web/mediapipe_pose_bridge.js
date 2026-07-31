@@ -18,6 +18,12 @@ window.AevumPoseBridge = (() => {
   let lastCameraError = null;
   let previewContainer = null;
   let previewLayout = "hidden";
+  let audioContext = null;
+  let masterGain = null;
+  let musicGain = null;
+  let sfxGain = null;
+  let musicLoopTimer = null;
+  let musicStarted = false;
 
   const ALWAYS_USE_FLOATING_PREVIEW = true;
   const FLOATING_PREVIEW_ID = "aevum-floating-camera-preview";
@@ -26,6 +32,139 @@ window.AevumPoseBridge = (() => {
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
   const MODEL_URL =
     "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task";
+
+  async function ensureAudioContext() {
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) return null;
+
+    if (!audioContext) {
+      audioContext = new AudioCtor();
+      masterGain = audioContext.createGain();
+      musicGain = audioContext.createGain();
+      sfxGain = audioContext.createGain();
+
+      masterGain.gain.value = 0.8;
+      musicGain.gain.value = 0.14;
+      sfxGain.gain.value = 0.22;
+
+      musicGain.connect(masterGain);
+      sfxGain.connect(masterGain);
+      masterGain.connect(audioContext.destination);
+    }
+
+    if (audioContext.state === "suspended") {
+      await audioContext.resume();
+    }
+
+    return audioContext;
+  }
+
+  function scheduleTone({ frequency, startTime, duration, volume, type = "sine", target = sfxGain }) {
+    if (!audioContext || !target) return;
+
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(frequency, startTime);
+
+    gain.gain.setValueAtTime(0.0001, startTime);
+    gain.gain.exponentialRampToValueAtTime(volume, startTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+    osc.connect(gain);
+    gain.connect(target);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.02);
+  }
+
+  function scheduleMusicLoop(startTime) {
+    const melody = [
+      { f: 392.0, t: 0.00, d: 0.34 },
+      { f: 493.88, t: 0.42, d: 0.26 },
+      { f: 587.33, t: 0.82, d: 0.36 },
+      { f: 523.25, t: 1.28, d: 0.30 },
+      { f: 392.0, t: 1.78, d: 0.34 },
+      { f: 440.0, t: 2.18, d: 0.26 },
+      { f: 493.88, t: 2.56, d: 0.40 },
+      { f: 349.23, t: 3.05, d: 0.46 },
+    ];
+
+    const bass = [
+      { f: 196.0, t: 0.00, d: 0.70 },
+      { f: 220.0, t: 1.55, d: 0.70 },
+      { f: 174.61, t: 3.10, d: 0.70 },
+    ];
+
+    melody.forEach((note) => {
+      scheduleTone({
+        frequency: note.f,
+        startTime: startTime + note.t,
+        duration: note.d,
+        volume: 0.045,
+        type: "triangle",
+        target: musicGain,
+      });
+    });
+
+    bass.forEach((note) => {
+      scheduleTone({
+        frequency: note.f,
+        startTime: startTime + note.t,
+        duration: note.d,
+        volume: 0.032,
+        type: "sine",
+        target: musicGain,
+      });
+    });
+  }
+
+  async function startBackgroundMusic() {
+    const ctx = await ensureAudioContext();
+    if (!ctx || musicStarted) return false;
+
+    musicStarted = true;
+    const loopLength = 4.2;
+    const scheduleAhead = () => scheduleMusicLoop(ctx.currentTime + 0.03);
+    scheduleAhead();
+    musicLoopTimer = window.setInterval(scheduleAhead, loopLength * 1000);
+    return true;
+  }
+
+  function stopBackgroundMusic() {
+    musicStarted = false;
+    if (musicLoopTimer) {
+      window.clearInterval(musicLoopTimer);
+      musicLoopTimer = null;
+    }
+  }
+
+  async function playScoreSound() {
+    const ctx = await ensureAudioContext();
+    if (!ctx) return false;
+    const now = ctx.currentTime + 0.01;
+    scheduleTone({ frequency: 740.0, startTime: now, duration: 0.12, volume: 0.12, type: "triangle" });
+    scheduleTone({ frequency: 987.77, startTime: now + 0.07, duration: 0.16, volume: 0.10, type: "sine" });
+    return true;
+  }
+
+  async function playCountdownSound() {
+    const ctx = await ensureAudioContext();
+    if (!ctx) return false;
+    const now = ctx.currentTime + 0.01;
+    scheduleTone({ frequency: 523.25, startTime: now, duration: 0.14, volume: 0.09, type: "triangle" });
+    scheduleTone({ frequency: 659.25, startTime: now + 0.1, duration: 0.18, volume: 0.08, type: "triangle" });
+    return true;
+  }
+
+  async function playDeathSound() {
+    const ctx = await ensureAudioContext();
+    if (!ctx) return false;
+    const now = ctx.currentTime + 0.01;
+    scheduleTone({ frequency: 392.0, startTime: now, duration: 0.16, volume: 0.12, type: "sawtooth" });
+    scheduleTone({ frequency: 277.18, startTime: now + 0.08, duration: 0.20, volume: 0.11, type: "triangle" });
+    scheduleTone({ frequency: 174.61, startTime: now + 0.18, duration: 0.28, volume: 0.10, type: "sine" });
+    return true;
+  }
 
   async function initialize() {
     try {
@@ -371,6 +510,7 @@ window.AevumPoseBridge = (() => {
       mediaStream = null;
     }
     videoElement = null;
+    stopBackgroundMusic();
     if (previewContainer && previewContainer.parentElement) {
       previewContainer.parentElement.removeChild(previewContainer);
     }
@@ -383,6 +523,11 @@ window.AevumPoseBridge = (() => {
     getLastCameraError,
     getCameraDebugState,
     setPreviewLayout,
+    startBackgroundMusic,
+    stopBackgroundMusic,
+    playScoreSound,
+    playCountdownSound,
+    playDeathSound,
     startCamera,
     stopCamera,
     processVideoFrame,

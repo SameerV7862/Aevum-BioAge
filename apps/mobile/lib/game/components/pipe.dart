@@ -12,6 +12,8 @@ class PipePair extends PositionComponent with HasGameRef {
 
   static final _pipePaint = ui.Paint()..color = const ui.Color(0xFF245684);
   static final _pipeCapPaint = ui.Paint()..color = const ui.Color(0xFF2B4564);
+  static final _pipeHighlightPaint = ui.Paint()..color = const ui.Color(0xFFAEB7C4);
+  static final _pipeSpecularPaint = ui.Paint()..color = const ui.Color(0xFFE2E8F0);
   static const double _capHeight = 12;
   static const double _capOverhang = 4;
 
@@ -37,6 +39,14 @@ class PipePair extends PositionComponent with HasGameRef {
         ui.Rect.fromLTWH(0, 0, pipeWidth, topHeight),
         _pipePaint,
       );
+      canvas.drawRect(
+        ui.Rect.fromLTWH(5, 0, 4, topHeight),
+        _pipeHighlightPaint,
+      );
+      canvas.drawRect(
+        ui.Rect.fromLTWH(10, 0, 1.5, topHeight),
+        _pipeSpecularPaint,
+      );
       // Cap at bottom of top pipe
       canvas.drawRect(
         ui.Rect.fromLTWH(
@@ -46,6 +56,10 @@ class PipePair extends PositionComponent with HasGameRef {
           _capHeight,
         ),
         _pipeCapPaint,
+      );
+      canvas.drawRect(
+        ui.Rect.fromLTWH(1, topHeight - _capHeight + 2, pipeWidth - 2, 2),
+        _pipeSpecularPaint,
       );
     }
 
@@ -57,6 +71,14 @@ class PipePair extends PositionComponent with HasGameRef {
         ui.Rect.fromLTWH(0, bottomTop, pipeWidth, bottomHeight),
         _pipePaint,
       );
+      canvas.drawRect(
+        ui.Rect.fromLTWH(5, bottomTop, 4, bottomHeight),
+        _pipeHighlightPaint,
+      );
+      canvas.drawRect(
+        ui.Rect.fromLTWH(10, bottomTop, 1.5, bottomHeight),
+        _pipeSpecularPaint,
+      );
       // Cap at top of bottom pipe
       canvas.drawRect(
         ui.Rect.fromLTWH(
@@ -66,6 +88,10 @@ class PipePair extends PositionComponent with HasGameRef {
           _capHeight,
         ),
         _pipeCapPaint,
+      );
+      canvas.drawRect(
+        ui.Rect.fromLTWH(1, bottomTop + 2, pipeWidth - 2, 2),
+        _pipeSpecularPaint,
       );
     }
   }

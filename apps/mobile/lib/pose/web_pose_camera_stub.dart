@@ -11,3 +11,13 @@ String? getWebPoseCameraLastError() => null;
 String? getWebPoseCameraDebugState() => null;
 
 void setWebPoseCameraPreviewLayout(String layout) {}
+
+Future<void> startWebBackgroundMusic() async {}
+
+void stopWebBackgroundMusic() {}
+
+Future<void> playWebScoreSound() async {}
+
+Future<void> playWebCountdownSound() async {}
+
+Future<void> playWebDeathSound() async {}

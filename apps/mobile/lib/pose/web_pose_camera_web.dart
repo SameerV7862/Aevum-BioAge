@@ -26,6 +26,21 @@ external JSString? _jsGetCameraDebugState();
 @JS('AevumPoseBridge.setPreviewLayout')
 external void _jsSetPreviewLayout(JSString layout);
 
+@JS('AevumPoseBridge.startBackgroundMusic')
+external JSPromise _jsStartBackgroundMusic();
+
+@JS('AevumPoseBridge.stopBackgroundMusic')
+external void _jsStopBackgroundMusic();
+
+@JS('AevumPoseBridge.playScoreSound')
+external JSPromise _jsPlayScoreSound();
+
+@JS('AevumPoseBridge.playCountdownSound')
+external JSPromise _jsPlayCountdownSound();
+
+@JS('AevumPoseBridge.playDeathSound')
+external JSPromise _jsPlayDeathSound();
+
 void _ensureRegistered() {
   if (_registered) return;
   ui_web.platformViewRegistry.registerViewFactory(_viewType, (int viewId) {
@@ -94,4 +109,24 @@ String? getWebPoseCameraDebugState() {
 
 void setWebPoseCameraPreviewLayout(String layout) {
   _jsSetPreviewLayout(layout.toJS);
+}
+
+Future<void> startWebBackgroundMusic() async {
+  await _jsStartBackgroundMusic().toDart;
+}
+
+void stopWebBackgroundMusic() {
+  _jsStopBackgroundMusic();
+}
+
+Future<void> playWebScoreSound() async {
+  await _jsPlayScoreSound().toDart;
+}
+
+Future<void> playWebCountdownSound() async {
+  await _jsPlayCountdownSound().toDart;
+}
+
+Future<void> playWebDeathSound() async {
+  await _jsPlayDeathSound().toDart;
 }

@@ -153,7 +153,12 @@ class _SessionPageState extends State<SessionPage> {
     _gameSub = _game.events.listen((event) {
       if (event == GameEvent.scored) {
         _stats.onPipeCleared(DateTime.now());
+        if (kIsWeb) {
+          unawaited(playWebScoreSound());
+        }
         if (mounted) setState(() {});
+      } else if (event == GameEvent.died && kIsWeb) {
+        unawaited(playWebDeathSound());
       }
     });
 
@@ -184,6 +189,10 @@ class _SessionPageState extends State<SessionPage> {
         _cameraDebugInfo = debugState;
       });
       if (!ready) return;
+
+      if (kIsWeb) {
+        unawaited(startWebBackgroundMusic());
+      }
 
       _webFrameTimer?.cancel();
       _webFrameTimer = Timer.periodic(const Duration(milliseconds: 66), (_) {
@@ -380,6 +389,9 @@ class _SessionPageState extends State<SessionPage> {
     }
 
     if (_calibrationUnlocked || _calibrationComplete) {
+      if (kIsWeb) {
+        unawaited(startWebBackgroundMusic());
+      }
       _beginRound();
       return;
     }
@@ -395,6 +407,10 @@ class _SessionPageState extends State<SessionPage> {
       _countdownSeconds = 0;
       _viewMessage = 'Follow the crane through one pipe to calibrate your motion range.';
     });
+
+    if (kIsWeb) {
+      unawaited(startWebBackgroundMusic());
+    }
 
     _game.startDemoRound();
   }
@@ -427,6 +443,10 @@ class _SessionPageState extends State<SessionPage> {
         _viewMessage = 'Great run. Get ready...';
         _countdownSeconds = 3;
       });
+
+      if (kIsWeb) {
+        unawaited(playWebCountdownSound());
+      }
 
       // Ready/Set/Go countdown before auto-starting the real run.
       _readyTimer?.cancel();
@@ -618,6 +638,7 @@ class _SessionPageState extends State<SessionPage> {
     _eventSub?.cancel();
     _gameSub?.cancel();
     if (kIsWeb) {
+      stopWebBackgroundMusic();
       unawaited(stopWebPoseCamera());
     }
     _pipeline.dispose();
