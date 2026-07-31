@@ -103,6 +103,7 @@ class PipeSpawner extends Component with HasGameRef {
   final double gapHeight;
   final double spawnInterval;
   final Random _rng = Random();
+  double? _lastGapY;
 
   double _timeSinceSpawn = 0;
   final List<PipePair> _pipes = [];
@@ -113,7 +114,7 @@ class PipeSpawner extends Component with HasGameRef {
   PipeSpawner({
     this.scrollSpeed = 120,
     this.gapHeight = 160,
-    this.spawnInterval = 3.05,
+    this.spawnInterval = 3.45,
   });
 
   /// Callback when crane passes a pipe — game increments score.
@@ -174,14 +175,22 @@ class PipeSpawner extends Component with HasGameRef {
 
   void _spawnPipe() {
     final gameHeight = gameRef.size.y;
-    final minGapY = 84.0;
-    final maxGapY = gameHeight - gapHeight - 92;
+    final minGapY = 88.0;
+    final maxGapY = gameHeight - gapHeight - 96;
     if (maxGapY <= minGapY) return;
 
     final raw = _rng.nextDouble();
     // Slight center bias trims unreachable extremes while keeping variety.
-    final centered = 0.5 + ((raw - 0.5) * 0.60);
-    final gapY = minGapY + centered * (maxGapY - minGapY);
+    final centered = 0.5 + ((raw - 0.5) * 0.52);
+    var gapY = minGapY + centered * (maxGapY - minGapY);
+
+    if (_lastGapY != null) {
+      final minStep = (_lastGapY! - 52.0).clamp(minGapY, maxGapY);
+      final maxStep = (_lastGapY! + 52.0).clamp(minGapY, maxGapY);
+      gapY = gapY.clamp(minStep, maxStep);
+    }
+    _lastGapY = gapY;
+
     final pipe = PipePair(gapY: gapY, gapHeight: gapHeight)
       ..position = Vector2(gameRef.size.x + 10, 0);
 
@@ -199,6 +208,7 @@ class PipeSpawner extends Component with HasGameRef {
     }
     _pipes.clear();
     _timeSinceSpawn = 0;
+    _lastGapY = null;
     active = false;
     scoringEnabled = false;
     autoSpawn = true;

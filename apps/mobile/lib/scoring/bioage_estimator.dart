@@ -178,8 +178,8 @@ class BioAgeEstimator {
 }
 
 double _lowScorePenalty(int score, double rawShift) {
-  if (score >= 7) return 0.0;
-  final severity = ((7 - score) / 4.0).clamp(0.0, 1.0);
+  if (score >= 8) return 0.0;
+  final severity = ((8 - score) / 4.0).clamp(0.0, 1.0);
   return (rawShift * severity).clamp(0.0, 2.0);
 }
 
@@ -191,17 +191,17 @@ class _AgeNorm {
 
 /// Score norms tuned for current game spacing/assist settings.
 const _maleScoreNorms = [
-  _AgeNorm(25, 16),
-  _AgeNorm(35, 13),
-  _AgeNorm(45, 10),
-  _AgeNorm(55, 8),
-  _AgeNorm(65, 6),
+  _AgeNorm(25, 17),
+  _AgeNorm(35, 14),
+  _AgeNorm(45, 11),
+  _AgeNorm(55, 9),
+  _AgeNorm(65, 7),
 ];
 
 const _femaleScoreNorms = [
-  _AgeNorm(25, 14),
-  _AgeNorm(35, 11),
-  _AgeNorm(45, 9),
-  _AgeNorm(55, 7),
-  _AgeNorm(65, 5),
+  _AgeNorm(25, 15),
+  _AgeNorm(35, 12),
+  _AgeNorm(45, 10),
+  _AgeNorm(55, 8),
+  _AgeNorm(65, 6),
 ];

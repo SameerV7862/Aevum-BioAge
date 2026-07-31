@@ -15,14 +15,14 @@ const double _gravity = 420.0; // px/s²
 const double _flapImpulse = -200.0; // px/s
 const double _glideImpulse = -60.0;
 const double _boostImpulse = -320.0;
-const double _maxFallSpeed = 400.0;
+const double _maxFallSpeed = 430.0;
 const double _scrollSpeed = 118.0;
 const double _pipeGap = 170.0;
 const double _birdWidth = 44.0;
 const double _birdHeight = 32.0;
-const double _maxLiftAcceleration = 520.0;
-const double _poseResponse = 3.9;
-const double _airDrag = 0.986;
+const double _maxLiftAcceleration = 620.0;
+const double _poseResponse = 4.8;
+const double _airDrag = 0.982;
 const double _collisionDropImpulse = 520.0;
 const double _collisionDropNudge = 14.0;
 const double _collisionFxDuration = 0.22;
@@ -258,7 +258,7 @@ class AevumFlappyGame extends FlameGame {
     pipeSpawner.scoringEnabled = true;
     _targetBirdY = crane.y;
     _filteredPoseHeight = 0.5;
-    _velocityY = _flapImpulse * 0.5;
+    _velocityY = _flapImpulse * 0.6;
     onStateChanged?.call(state);
   }
 
@@ -273,7 +273,7 @@ class AevumFlappyGame extends FlameGame {
     state = GameState.playing;
     _targetBirdY = crane.y;
     _filteredPoseHeight = 0.5;
-    _velocityY = _flapImpulse * 0.45;
+    _velocityY = _flapImpulse * 0.55;
     // Spawn one immediate pipe, then keep spacing from regular spawner.
     pipeSpawner.spawnOnePipe();
     onStateChanged?.call(state);
@@ -283,9 +283,9 @@ class AevumFlappyGame extends FlameGame {
     if (state != GameState.playing) return;
 
     final clampedHeight = normalizedHeight.clamp(0.0, 1.0);
-    _filteredPoseHeight += (clampedHeight - _filteredPoseHeight) * 0.42;
-    final minY = 56.0;
-    final maxY = ground.topY - 64;
+    _filteredPoseHeight += (clampedHeight - _filteredPoseHeight) * 0.5;
+    final minY = 48.0;
+    final maxY = ground.topY - 56;
     final travel = maxY - minY;
     _targetBirdY = maxY - (_filteredPoseHeight * travel);
   }

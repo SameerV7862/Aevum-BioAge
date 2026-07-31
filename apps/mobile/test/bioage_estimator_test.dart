@@ -57,8 +57,8 @@ void main() {
       const UserProfile(chronologicalAge: 35, sex: 'male'),
     );
 
-    expect(result.estimatedBioAge, inInclusiveRange(35.0, 37.0));
-    expect(result.ageDelta, lessThanOrEqualTo(2.0));
+    expect(result.estimatedBioAge, inInclusiveRange(36.0, 38.0));
+    expect(result.ageDelta, lessThanOrEqualTo(3.0));
   });
 
   test('six pipes for a 35-year-old male remains a modest increase', () {
@@ -76,15 +76,34 @@ void main() {
       const UserProfile(chronologicalAge: 35, sex: 'male'),
     );
 
-    expect(result.estimatedBioAge, inInclusiveRange(36.0, 38.0));
-    expect(result.ageDelta, lessThanOrEqualTo(3.0));
+    expect(result.estimatedBioAge, inInclusiveRange(36.0, 39.0));
+    expect(result.ageDelta, lessThanOrEqualTo(4.0));
   });
 
-  test('seven pipes for a 35-year-old male stays near chronological age', () {
+  test('seven pipes for a 35-year-old male is close to neutral on easier difficulty', () {
     final result = estimator.estimate(
       const BioAgeInputFeatures(
         mode: 'pushup',
         totalValidReps: 7,
+        cadenceCv: 0.5,
+        maxHoldSeconds: 0.0,
+        fatigueSlope: 0.0,
+        romConsistency: 0.5,
+        trackingQuality: 0.7,
+        sessionDuration: Duration(minutes: 1),
+      ),
+      const UserProfile(chronologicalAge: 35, sex: 'male'),
+    );
+
+    expect(result.estimatedBioAge, inInclusiveRange(35.0, 37.0));
+    expect(result.ageDelta, lessThanOrEqualTo(2.0));
+  });
+
+  test('eight pipes for a 35-year-old male stays near chronological age', () {
+    final result = estimator.estimate(
+      const BioAgeInputFeatures(
+        mode: 'pushup',
+        totalValidReps: 8,
         cadenceCv: 0.5,
         maxHoldSeconds: 0.0,
         fatigueSlope: 0.0,
