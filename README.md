@@ -68,12 +68,24 @@ Output is generated at:
 `apps/mobile/build/web`
 
 ## Server deploy options
+- **GitHub Pages** via `.github/workflows/github-pages.yml`
 - **Nginx static host** using `deploy/nginx.conf`
 - **Docker** image using `deploy/Dockerfile`
 - **Vercel** using `deploy/vercel.json`
 - **Netlify** using `deploy/netlify.toml`
 
 See `docs/web-deployment.md` for exact steps.
+
+## GitHub Pages
+
+This repo can deploy the Flutter web build automatically to GitHub Pages.
+
+1. Push to `main`.
+2. In GitHub, enable Pages and set the source to `GitHub Actions`.
+3. The workflow builds `apps/mobile` with base path `/Aevum-BioAge/` and publishes the site.
+
+Expected URL:
+`https://sameerv7862.github.io/Aevum-BioAge/`
 
 ## Current scaffold status
 - App shell and navigation
