@@ -63,8 +63,34 @@ docker run -p 8080:80 aevum-bioage-web
 Then open `http://localhost:8080`.
 
 ## Option D: Vercel
-- Use `deploy/vercel.json` settings
-- Ensure project root can access `apps/mobile`
+
+Recommended target:
+- `https://bioage.aevumhealthhub.com/`
+
+Repository setup in this repo:
+- Root config: `vercel.json`
+- App-root config: `apps/mobile/vercel.json`
+- Reference config: `deploy/vercel.json`
+
+Vercel project settings:
+1. Import the GitHub repository.
+2. Either:
+	- keep the project root at the repository root, or
+	- set the root directory to `apps/mobile`
+3. Framework preset: `Other`.
+4. Vercel will pick up the matching `vercel.json` automatically.
+5. The build installs Flutter into `/tmp/flutter-sdk` and publishes the Flutter web output.
+
+Custom domain setup:
+1. Open the Vercel project.
+2. Go to `Settings > Domains`.
+3. Add `bioage.aevumhealthhub.com`.
+4. Add the DNS record Vercel gives you for that subdomain.
+
+Notes:
+- This config builds with `--base-href /` because it is intended for a subdomain root.
+- HTTPS is required for camera access and Vercel provides it.
+- This app uses hash routes, so a single-page-app rewrite to `index.html` is sufficient.
 
 ## Option E: Netlify
 - Use `deploy/netlify.toml`

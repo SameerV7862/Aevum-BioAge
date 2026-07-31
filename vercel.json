@@ -1,5 +1,7 @@
 {
-  "version": 2,
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "git clone https://github.com/flutter/flutter.git --depth 1 --branch stable /tmp/flutter-sdk && /tmp/flutter-sdk/bin/flutter config --enable-web",
   "buildCommand": "cd apps/mobile && export PATH=/tmp/flutter-sdk/bin:$PATH && flutter pub get && flutter build web --release --base-href / --no-wasm-dry-run --pwa-strategy=none",
   "outputDirectory": "apps/mobile/build/web",
   "rewrites": [

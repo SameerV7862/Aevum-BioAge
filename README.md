@@ -87,6 +87,18 @@ This repo can deploy the Flutter web build automatically to GitHub Pages.
 Expected URL:
 `https://sameerv7862.github.io/Aevum-BioAge/`
 
+## Vercel
+
+Recommended production target for the main website ecosystem:
+`https://bioage.aevumhealthhub.com/`
+
+This repo includes a root `vercel.json` that:
+1. installs Flutter during the Vercel build
+2. builds the app from `apps/mobile`
+3. publishes the static output from `apps/mobile/build/web`
+
+For exact setup, see [docs/web-deployment.md](/Users/varkasam/Aevum-BioAge/docs/web-deployment.md).
+
 ## Current scaffold status
 - App shell and navigation
 - Web-first landing page + start assessment flow
