@@ -167,6 +167,18 @@ window.AevumPoseBridge = (() => {
     return true;
   }
 
+  async function playFinishSound() {
+    const ctx = await ensureAudioContext();
+    if (!ctx) return false;
+    const now = ctx.currentTime + 0.01;
+
+    scheduleTone({ frequency: 523.25, startTime: now, duration: 0.12, volume: 0.11, type: "triangle" });
+    scheduleTone({ frequency: 659.25, startTime: now + 0.08, duration: 0.12, volume: 0.11, type: "triangle" });
+    scheduleTone({ frequency: 783.99, startTime: now + 0.16, duration: 0.14, volume: 0.11, type: "triangle" });
+    scheduleTone({ frequency: 1046.5, startTime: now + 0.28, duration: 0.22, volume: 0.13, type: "sine" });
+    return true;
+  }
+
   async function initialize() {
     try {
       const vision = await import(
@@ -566,6 +578,7 @@ window.AevumPoseBridge = (() => {
     playScoreSound,
     playCountdownSound,
     playDeathSound,
+    playFinishSound,
     startCamera,
     stopCamera,
     processVideoFrame,

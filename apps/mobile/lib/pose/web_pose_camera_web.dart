@@ -41,6 +41,9 @@ external JSPromise _jsPlayCountdownSound();
 @JS('AevumPoseBridge.playDeathSound')
 external JSPromise _jsPlayDeathSound();
 
+@JS('AevumPoseBridge.playFinishSound')
+external JSPromise _jsPlayFinishSound();
+
 void _ensureRegistered() {
   if (_registered) return;
   ui_web.platformViewRegistry.registerViewFactory(_viewType, (int viewId) {
@@ -129,4 +132,8 @@ Future<void> playWebCountdownSound() async {
 
 Future<void> playWebDeathSound() async {
   await _jsPlayDeathSound().toDart;
+}
+
+Future<void> playWebFinishSound() async {
+  await _jsPlayFinishSound().toDart;
 }

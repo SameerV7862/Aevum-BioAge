@@ -21,3 +21,5 @@ Future<void> playWebScoreSound() async {}
 Future<void> playWebCountdownSound() async {}
 
 Future<void> playWebDeathSound() async {}
+
+Future<void> playWebFinishSound() async {}

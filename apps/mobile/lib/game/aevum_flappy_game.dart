@@ -16,7 +16,7 @@ const double _flapImpulse = -200.0; // px/s
 const double _glideImpulse = -60.0;
 const double _boostImpulse = -320.0;
 const double _maxFallSpeed = 430.0;
-const double _scrollSpeed = 118.0;
+const double _scrollSpeed = 128.0;
 const double _pipeGap = 170.0;
 const double _birdWidth = 44.0;
 const double _birdHeight = 32.0;
@@ -30,10 +30,13 @@ const double _pipeAssistStrength = 0.42;
 const double _pipeAssistWindow = 430.0;
 const double _directionSwapDamping = 0.55;
 const double _demoFloorRecoveryBand = 78.0;
+const int _maxPipesPerRun = 60;
 
 enum GameState { ready, playing, gameOver }
 
 class AevumFlappyGame extends FlameGame {
+  static const int maxPipesPerRun = _maxPipesPerRun;
+
   late CraneSpriteComponent crane;
   late PipeSpawner pipeSpawner;
   late GroundComponent ground;
@@ -81,6 +84,7 @@ class AevumFlappyGame extends FlameGame {
     pipeSpawner = PipeSpawner(
       scrollSpeed: _scrollSpeed,
       gapHeight: _pipeGap,
+      spawnInterval: 3.12,
     )..onScored = () {
         if (!pipeSpawner.scoringEnabled) return;
         scoreDisplay.increment();
@@ -94,6 +98,10 @@ class AevumFlappyGame extends FlameGame {
           // Require one clean pipe clear after any collision during demo.
           _demoCollisionSinceLastClear = false;
         }
+      }
+      ..onReachedScoreCap = () {
+        if (_isDemoRound) return;
+        _finishAtGoal();
       };
     add(pipeSpawner);
 
@@ -252,6 +260,7 @@ class AevumFlappyGame extends FlameGame {
 
   void startPlaying() {
     _isDemoRound = false;
+    pipeSpawner.maxScoringPipes = _maxPipesPerRun;
     pipeSpawner.autoSpawn = true;
     state = GameState.playing;
     pipeSpawner.active = true;
@@ -265,6 +274,7 @@ class AevumFlappyGame extends FlameGame {
   void startDemoRound() {
     restart();
     _isDemoRound = true;
+    pipeSpawner.maxScoringPipes = null;
     pipeSpawner.autoSpawn = true;
     pipeSpawner.active = true;
     pipeSpawner.scoringEnabled = true;
@@ -336,6 +346,15 @@ class AevumFlappyGame extends FlameGame {
     onStateChanged?.call(state);
   }
 
+  void _finishAtGoal() {
+    if (state == GameState.gameOver) return;
+    state = GameState.gameOver;
+    pipeSpawner.scoringEnabled = false;
+    pipeSpawner.autoSpawn = false;
+    _eventController.add(GameEvent.finished);
+    onStateChanged?.call(state);
+  }
+
   void _finishDemoRound(bool passed) {
     _isDemoRound = false;
     restart();
@@ -378,4 +397,4 @@ bool isBirdCollidingWithPipe(Rect birdRect, Rect topPipeRect, Rect bottomPipeRec
   return birdBounds.overlaps(topHitRect) || birdBounds.overlaps(bottomHitRect);
 }
 
-enum GameEvent { flap, glide, boost, scored, died }
+enum GameEvent { flap, glide, boost, scored, died, finished }

@@ -110,6 +110,10 @@ class PipeSpawner extends Component with HasGameRef {
   bool scoringEnabled = false;
   bool active = false;
   bool autoSpawn = true;
+  int? maxScoringPipes;
+  int _scoredPipeCount = 0;
+  bool _finishLineSpawned = false;
+  FinishLineMarker? _finishLine;
 
   PipeSpawner({
     this.scrollSpeed = 120,
@@ -119,6 +123,7 @@ class PipeSpawner extends Component with HasGameRef {
 
   /// Callback when crane passes a pipe — game increments score.
   void Function()? onScored;
+  void Function()? onReachedScoreCap;
 
   /// The x-position of the crane (for scoring checks).
   double craneX = 0;
@@ -162,13 +167,37 @@ class PipeSpawner extends Component with HasGameRef {
       // Score only once the round is active and the bird has passed the pipe.
       if (active && scoringEnabled && !pipe.scored && pipe.x + pipe.pipeWidth < craneX - 6) {
         pipe.scored = true;
-        onScored?.call();
+        final cap = maxScoringPipes;
+        if (cap == null || _scoredPipeCount < cap) {
+          _scoredPipeCount += 1;
+          onScored?.call();
+        }
+
+        if (cap != null) {
+          if (_scoredPipeCount >= cap - 6 && !_finishLineSpawned) {
+            _spawnFinishLine();
+          }
+          if (_scoredPipeCount >= cap) {
+            scoringEnabled = false;
+            autoSpawn = false;
+            onReachedScoreCap?.call();
+          }
+        }
       }
 
       // Remove off-screen pipes
       if (pipe.x < -pipe.pipeWidth - 10) {
         pipe.removeFromParent();
         _pipes.remove(pipe);
+      }
+    }
+
+    final finishLine = _finishLine;
+    if (finishLine != null) {
+      finishLine.x -= scrollSpeed * dt;
+      if (finishLine.x < -finishLine.width - 12) {
+        finishLine.removeFromParent();
+        _finishLine = null;
       }
     }
   }
@@ -202,16 +231,90 @@ class PipeSpawner extends Component with HasGameRef {
     _spawnPipe();
   }
 
+  void _spawnFinishLine() {
+    if (_finishLineSpawned) return;
+    final marker = FinishLineMarker()
+      ..position = Vector2(gameRef.size.x + 220, 0);
+    _finishLine = marker;
+    _finishLineSpawned = true;
+    gameRef.add(marker);
+  }
+
   void reset() {
     for (final pipe in _pipes) {
       pipe.removeFromParent();
     }
     _pipes.clear();
+    _finishLine?.removeFromParent();
+    _finishLine = null;
     _timeSinceSpawn = 0;
     _lastGapY = null;
     active = false;
     scoringEnabled = false;
     autoSpawn = true;
+    _scoredPipeCount = 0;
+    _finishLineSpawned = false;
+  }
+}
+
+class FinishLineMarker extends PositionComponent with HasGameRef {
+  static final _polePaint = ui.Paint()..color = const ui.Color(0xFFE5E7EB);
+  static final _darkPaint = ui.Paint()..color = const ui.Color(0xFF111827);
+  static final _lightPaint = ui.Paint()..color = const ui.Color(0xFFF9FAFB);
+  static final _labelPaint = ui.Paint()..color = const ui.Color(0xCC0B1220);
+
+  static const double _markerWidth = 24;
+  static const double _tileSize = 8;
+
+  @override
+  Future<void> onLoad() async {
+    size = Vector2(_markerWidth, gameRef.size.y);
+  }
+
+  @override
+  void render(ui.Canvas canvas) {
+    final poleRect = ui.Rect.fromLTWH(0, 0, 4, size.y);
+    canvas.drawRect(poleRect, _polePaint);
+
+    final flagLeft = 4.0;
+    final flagWidth = size.x - flagLeft;
+    final rowCount = (size.y / _tileSize).ceil();
+    final colCount = (flagWidth / _tileSize).ceil();
+
+    for (var row = 0; row < rowCount; row++) {
+      for (var col = 0; col < colCount; col++) {
+        final isDark = (row + col).isEven;
+        final rect = ui.Rect.fromLTWH(
+          flagLeft + col * _tileSize,
+          row * _tileSize,
+          _tileSize,
+          _tileSize,
+        );
+        canvas.drawRect(rect, isDark ? _darkPaint : _lightPaint);
+      }
+    }
+
+    final labelRect = ui.RRect.fromRectAndRadius(
+      ui.Rect.fromLTWH(flagLeft + 2, 10, flagWidth - 4, 18),
+      const ui.Radius.circular(5),
+    );
+    canvas.drawRRect(labelRect, _labelPaint);
+
+    final paragraphStyle = ui.ParagraphStyle(
+      fontSize: 10,
+      textAlign: TextAlign.center,
+      maxLines: 1,
+    );
+    final textStyle = ui.TextStyle(
+      color: const ui.Color(0xFFFFFFFF),
+      fontWeight: ui.FontWeight.w700,
+    );
+    final paragraphBuilder = ui.ParagraphBuilder(paragraphStyle)
+      ..pushStyle(textStyle)
+      ..addText('FINISH');
+    final paragraph = paragraphBuilder.build()
+      ..layout(ui.ParagraphConstraints(width: flagWidth - 6));
+    canvas.drawParagraph(paragraph, ui.Offset(flagLeft + 3, 14));
   }
 }
 
