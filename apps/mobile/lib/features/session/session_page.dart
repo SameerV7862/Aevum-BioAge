@@ -1347,14 +1347,22 @@ class _StickBirdControlPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     if (mode == _ControlDemoMode.pushup) {
-      final torsoY = figureBaseY - 20 + bodyOffset;
-      final head = Offset(size.width * 0.22, torsoY - 20);
-      canvas.drawCircle(head, 5, linePaint);
-      canvas.drawLine(Offset(head.dx, head.dy + 6), Offset(head.dx + 20, torsoY + 10), linePaint);
-      canvas.drawLine(Offset(head.dx + 20, torsoY + 10), Offset(head.dx + 36, torsoY + 10), linePaint);
-      canvas.drawLine(Offset(head.dx + 10, torsoY + 4), Offset(head.dx + 10, torsoY + 18), linePaint);
-      canvas.drawLine(Offset(head.dx + 25, torsoY + 10), Offset(head.dx + 28, torsoY + 22), linePaint);
-      canvas.drawLine(Offset(head.dx + 36, torsoY + 10), Offset(head.dx + 40, torsoY + 22), linePaint);
+      final bend = 1 - t;
+      final shoulder = Offset(size.width * 0.30, size.height * 0.56 + bodyOffset * 0.7);
+      final hip = Offset(shoulder.dx + 24, shoulder.dy + bend * 3);
+      final ankle = Offset(hip.dx + 24, hip.dy + 2 + bend * 2);
+      final elbow = Offset(shoulder.dx + 8, shoulder.dy + 14 + bend * 8);
+      final wrist = Offset(elbow.dx + 8, figureBaseY + 1);
+      final head = Offset(shoulder.dx - 11, shoulder.dy - 12 - bend * 2);
+
+      canvas.drawCircle(head, 5.5, linePaint);
+      canvas.drawLine(Offset(head.dx + 3, head.dy + 5), shoulder, linePaint);
+      canvas.drawLine(shoulder, hip, linePaint);
+      canvas.drawLine(hip, ankle, linePaint);
+      canvas.drawLine(shoulder, elbow, linePaint);
+      canvas.drawLine(elbow, wrist, linePaint);
+      canvas.drawLine(hip, Offset(hip.dx + 3, hip.dy + 12), linePaint);
+      canvas.drawLine(ankle, Offset(ankle.dx + 3, ankle.dy + 11), linePaint);
     } else {
       final hipY = figureBaseY - 30 + bodyOffset;
       final head = Offset(size.width * 0.24, hipY - 24);
