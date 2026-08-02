@@ -117,4 +117,53 @@ void main() {
     expect(result.estimatedBioAge, inInclusiveRange(35.0, 36.0));
     expect(result.ageDelta, lessThanOrEqualTo(1.0));
   });
+
+  test('same score in squat mode should not look better than push-up mode', () {
+    const features = BioAgeInputFeatures(
+      mode: 'pushup',
+      totalValidReps: 12,
+      cadenceCv: 0.28,
+      maxHoldSeconds: 1.2,
+      fatigueSlope: 0.05,
+      romConsistency: 0.74,
+      trackingQuality: 0.9,
+      sessionDuration: Duration(minutes: 2),
+    );
+    const profile = UserProfile(chronologicalAge: 35, sex: 'male');
+
+    final pushupResult = estimator.estimate(features, profile);
+    final squatResult = estimator.estimate(
+      const BioAgeInputFeatures(
+        mode: 'squat',
+        totalValidReps: 12,
+        cadenceCv: 0.28,
+        maxHoldSeconds: 1.2,
+        fatigueSlope: 0.05,
+        romConsistency: 0.74,
+        trackingQuality: 0.9,
+        sessionDuration: Duration(minutes: 2),
+      ),
+      profile,
+    );
+
+    expect(squatResult.estimatedBioAge, greaterThanOrEqualTo(pushupResult.estimatedBioAge));
+  });
+
+  test('high squat score still stays conservative for age reduction', () {
+    final result = estimator.estimate(
+      const BioAgeInputFeatures(
+        mode: 'squat',
+        totalValidReps: 20,
+        cadenceCv: 0.2,
+        maxHoldSeconds: 1.0,
+        fatigueSlope: 0.0,
+        romConsistency: 0.8,
+        trackingQuality: 0.9,
+        sessionDuration: Duration(minutes: 2),
+      ),
+      const UserProfile(chronologicalAge: 45, sex: 'male'),
+    );
+
+    expect(result.estimatedBioAge, inInclusiveRange(41.0, 46.0));
+  });
 }

@@ -62,6 +62,7 @@ class _SessionPageState extends State<SessionPage> {
   bool _cameraRequestInFlight = false;
   String _mode = 'pushup';
   GameState _gameState = GameState.ready;
+  bool _prepBriefingCompleted = false;
   bool _readyToStart = false;
   bool _calibrationActive = false;
   bool _calibrationComplete = false;
@@ -387,11 +388,20 @@ class _SessionPageState extends State<SessionPage> {
 
   void _onPrepBriefingContinue() {
     setState(() {
+      _prepBriefingCompleted = true;
       _phase = _Phase.playing;
     });
   }
 
   void _startSession() {
+    if (!_prepBriefingCompleted) {
+      setState(() {
+        _phase = _Phase.prepBriefing;
+        _cameraMessage = 'Review the instructions first, then start demo calibration.';
+      });
+      return;
+    }
+
     if (!cameraReadyOrWarn()) return;
     if (!_pipelineActive) {
       setState(() {

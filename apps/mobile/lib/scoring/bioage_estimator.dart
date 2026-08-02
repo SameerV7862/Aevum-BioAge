@@ -78,6 +78,8 @@ class BioAgeEstimator {
   BioAgeResult estimate(BioAgeInputFeatures f, UserProfile profile) {
     final norms = profile.sex == 'female' ? _femaleScoreNorms : _maleScoreNorms;
     final clearedPipes = f.totalValidReps;
+    final scoreEquivalency = _modeScoreEquivalency(f.mode);
+    final equivalentClearedPipes = (clearedPipes * scoreEquivalency).round();
 
   // A single repetition test should not be treated as a direct age clock.
   // Yang et al. (JAMA Netw Open, 2019) reported push-up capacity as a risk
@@ -85,7 +87,9 @@ class BioAgeEstimator {
   // 2023) built fitness-age from multiple functional tests. We therefore
   // shrink the rep-matched age strongly back toward chronological age and let
   // session-quality modifiers contribute only modestly.
-    final scoreMatchedAge = _scoreToFitnessAge(clearedPipes, norms);
+    // Squat control is intentionally treated as a lighter stimulus than push-ups.
+    // Convert to a push-up-equivalent score before mapping to age norms.
+    final scoreMatchedAge = _scoreToFitnessAge(equivalentClearedPipes, norms);
     final rawScoreAgeShift = (scoreMatchedAge - profile.chronologicalAge) * 0.18;
 
     // Difficulty guardrail:
@@ -94,7 +98,7 @@ class BioAgeEstimator {
     // - High scores can still reduce estimated age.
     final scoreAgeShift = rawScoreAgeShift < 0
       ? rawScoreAgeShift.clamp(-5.0, 0.0)
-      : _lowScorePenalty(clearedPipes, rawScoreAgeShift);
+      : _lowScorePenalty(equivalentClearedPipes, rawScoreAgeShift);
   final cadenceAdjustment = ((0.35 - f.cadenceCv) * 2.0).clamp(-1.0, 1.0);
   final fatigueAdjustment = (-f.fatigueSlope * 1.5).clamp(-1.0, 1.0);
   final holdAdjustment = (f.maxHoldSeconds / 3.0).clamp(0.0, 1.0) * 0.75;
@@ -124,7 +128,7 @@ class BioAgeEstimator {
 
     // Step 4: Percentile label relative to chronological age norms
     final expectedAvg = _averageScoreForAge(profile.chronologicalAge, norms);
-    final percentileLabel = _percentileLabel(clearedPipes, expectedAvg);
+    final percentileLabel = _percentileLabel(equivalentClearedPipes, expectedAvg);
 
     return BioAgeResult(
       estimatedBioAge: bioAge.roundToDouble(),
@@ -174,6 +178,13 @@ class BioAgeEstimator {
     if (ratio >= 0.85) return 'Average';
     if (ratio >= 0.6) return 'Below Average';
     return 'Needs Improvement';
+  }
+
+  double _modeScoreEquivalency(String mode) {
+    // Squats remain useful as a control modality, but each cleared pipe should
+    // map to less movement-capacity credit than push-ups.
+    if (mode == 'squat') return 0.72;
+    return 1.0;
   }
 }
 
