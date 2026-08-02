@@ -13,148 +13,213 @@ class WebHomePage extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           const _LandingBackdrop(),
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1060),
-              child: Padding(
+          LayoutBuilder(
+            builder: (context, viewport) {
+              final compact = viewport.maxWidth < 820;
+              final isVeryNarrow = viewport.maxWidth < 430;
+              final heroCard = Container(
+                padding: EdgeInsets.all(compact ? 20 : 28),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xCC11263B), Color(0xE61B3B59)],
+                  ),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: AevumColors.border),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x66040A10), blurRadius: 30, offset: Offset(0, 16)),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: compact ? MainAxisAlignment.start : MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AevumColors.cream.withAlpha(24),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: AevumColors.cream.withAlpha(40)),
+                      ),
+                      child: const Text(
+                        'Movement assessment with Aevum BioAge',
+                        style: TextStyle(
+                          color: AevumColors.cream,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.7,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Estimate biological age through motion, rhythm, and repeatable effort.',
+                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                        fontSize: compact ? 30 : 52,
+                        height: 1.05,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      compact
+                          ? 'Start with a quick camera-guided movement check and get a BioAge estimate.'
+                          : 'Inspired by Aevum\'s longevity approach, this assessment blends deliberate movement, body awareness, and a coordinated feedback loop into one focused experience.',
+                      style: const TextStyle(
+                        color: AevumColors.textSecondary,
+                        fontSize: 16,
+                        height: 1.5,
+                      ),
+                    ),
+                    SizedBox(height: compact ? 20 : 24),
+                    if (compact) ...[
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pushNamed(SessionPage.routeName);
+                            },
+                            icon: const Icon(Icons.play_arrow),
+                            label: const Text('Start Assessment'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              showDialog<void>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  backgroundColor: AevumColors.surface,
+                                  title: const Text('Camera Access'),
+                                  content: const Text(
+                                    'Allow camera permission in your browser when prompted. For best results, keep your upper body visible with steady lighting and room to move.',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.videocam_outlined),
+                            label: const Text('Camera Guidance'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        if (!isVeryNarrow) const _InfoPill(label: 'Push-ups or squats'),
+                        const _InfoPill(label: 'Camera-guided tracking'),
+                        const _InfoPill(label: 'BioAge estimate'),
+                      ],
+                    ),
+                    if (!compact) ...[
+                      const SizedBox(height: 28),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pushNamed(SessionPage.routeName);
+                            },
+                            icon: const Icon(Icons.play_arrow),
+                            label: const Text('Start Assessment'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              showDialog<void>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  backgroundColor: AevumColors.surface,
+                                  title: const Text('Camera Access'),
+                                  content: const Text(
+                                    'Allow camera permission in your browser when prompted. For best results, keep your upper body visible with steady lighting and room to move.',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.videocam_outlined),
+                            label: const Text('Camera Guidance'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              );
+
+              final metricCard = Container(
                 padding: const EdgeInsets.all(24),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final compact = constraints.maxWidth < 820;
-                    return Flex(
-                      direction: compact ? Axis.vertical : Axis.horizontal,
+                decoration: BoxDecoration(
+                  color: AevumColors.surfaceDim.withAlpha(214),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: AevumColors.border),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _MetricRow(index: '01', title: 'Assess', copy: 'Capture motion quality and rep performance through a guided camera view.'),
+                    SizedBox(height: 18),
+                    _MetricRow(index: '02', title: 'Play', copy: 'Use body movement to keep the crane aloft while navigating a coordinated flow.'),
+                    SizedBox(height: 18),
+                    _MetricRow(index: '03', title: 'Reflect', copy: 'Turn exercise output into a simple wellness estimate with visible progress cues.'),
+                  ],
+                ),
+              );
+
+              if (compact) {
+                return SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 560),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            heroCard,
+                            const SizedBox(height: 20),
+                            if (!isVeryNarrow) metricCard,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1060),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(
-                          flex: 11,
-                          child: Container(
-                            padding: const EdgeInsets.all(28),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [Color(0xCC11263B), Color(0xE61B3B59)],
-                              ),
-                              borderRadius: BorderRadius.circular(28),
-                              border: Border.all(color: AevumColors.border),
-                              boxShadow: const [
-                                BoxShadow(color: Color(0x66040A10), blurRadius: 30, offset: Offset(0, 16)),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: AevumColors.cream.withAlpha(24),
-                                    borderRadius: BorderRadius.circular(999),
-                                    border: Border.all(color: AevumColors.cream.withAlpha(40)),
-                                  ),
-                                  child: const Text(
-                                    'Movement assessment with Aevum BioAge',
-                                    style: TextStyle(
-                                      color: AevumColors.cream,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.7,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  'Estimate biological age through motion, rhythm, and repeatable effort.',
-                                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                                    fontSize: compact ? 36 : 52,
-                                    height: 1.05,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'Inspired by Aevum\'s longevity approach, this assessment blends deliberate movement, body awareness, and a coordinated feedback loop into one focused experience.',
-                                  style: TextStyle(color: AevumColors.textSecondary, fontSize: 16, height: 1.5),
-                                ),
-                                const SizedBox(height: 24),
-                                Wrap(
-                                  spacing: 10,
-                                  runSpacing: 10,
-                                  children: const [
-                                    _InfoPill(label: 'Push-ups or squats'),
-                                    _InfoPill(label: 'Camera-guided tracking'),
-                                    _InfoPill(label: 'BioAge estimate'),
-                                  ],
-                                ),
-                                const SizedBox(height: 28),
-                                Wrap(
-                                  spacing: 12,
-                                  runSpacing: 12,
-                                  children: [
-                                    ElevatedButton.icon(
-                                      onPressed: () {
-                                        Navigator.of(context).pushNamed(SessionPage.routeName);
-                                      },
-                                      icon: const Icon(Icons.play_arrow),
-                                      label: const Text('Start Assessment'),
-                                    ),
-                                    OutlinedButton.icon(
-                                      onPressed: () {
-                                        showDialog<void>(
-                                          context: context,
-                                          builder: (context) => AlertDialog(
-                                            backgroundColor: AevumColors.surface,
-                                            title: const Text('Camera Access'),
-                                            content: const Text(
-                                              'Allow camera permission in your browser when prompted. For best results, keep your upper body visible with steady lighting and room to move.',
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.of(context).pop(),
-                                                child: const Text('OK'),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      },
-                                      icon: const Icon(Icons.videocam_outlined),
-                                      label: const Text('Camera Guidance'),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: compact ? 0 : 20, height: compact ? 20 : 0),
-                        Expanded(
-                          flex: 8,
-                          child: Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: AevumColors.surfaceDim.withAlpha(214),
-                              borderRadius: BorderRadius.circular(28),
-                              border: Border.all(color: AevumColors.border),
-                            ),
-                            child: const Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                _MetricRow(index: '01', title: 'Assess', copy: 'Capture motion quality and rep performance through a guided camera view.'),
-                                SizedBox(height: 18),
-                                _MetricRow(index: '02', title: 'Play', copy: 'Use body movement to keep the crane aloft while navigating a coordinated flow.'),
-                                SizedBox(height: 18),
-                                _MetricRow(index: '03', title: 'Reflect', copy: 'Turn exercise output into a simple wellness estimate with visible progress cues.'),
-                              ],
-                            ),
-                          ),
-                        ),
+                        Expanded(flex: 11, child: heroCard),
+                        const SizedBox(width: 20),
+                        Expanded(flex: 8, child: metricCard),
                       ],
-                    );
-                  },
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ],
       ),
