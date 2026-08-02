@@ -302,7 +302,7 @@ class FinishLineMarker extends PositionComponent with HasGameRef {
 
     final paragraphStyle = ui.ParagraphStyle(
       fontSize: 10,
-      textAlign: TextAlign.center,
+      textAlign: ui.TextAlign.center,
       maxLines: 1,
     );
     final textStyle = ui.TextStyle(
