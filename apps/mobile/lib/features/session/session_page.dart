@@ -1008,10 +1008,33 @@ class _ProfileInputScreen extends StatefulWidget {
   State<_ProfileInputScreen> createState() => _ProfileInputScreenState();
 }
 
-class _PrepBriefingScreen extends StatelessWidget {
+class _PrepBriefingScreen extends StatefulWidget {
   final VoidCallback onContinue;
 
   const _PrepBriefingScreen({required this.onContinue});
+
+  @override
+  State<_PrepBriefingScreen> createState() => _PrepBriefingScreenState();
+}
+
+class _PrepBriefingScreenState extends State<_PrepBriefingScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2600),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1053,8 +1076,27 @@ class _PrepBriefingScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 18),
                         const Text(
-                          'Please make sure you have an open area to play. Keep space around you and behind you so you can move safely during the session.',
+                          'Step 1: Make sure you have a clear room. Keep space in front, behind, and on both sides so your movement is safe and fully visible to the camera.',
                           style: TextStyle(fontSize: 15, color: AevumColors.textPrimary, height: 1.5),
+                        ),
+                        const SizedBox(height: 14),
+                        AspectRatio(
+                          aspectRatio: 16 / 7,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: AevumColors.surfaceDim.withAlpha(175),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AevumColors.border),
+                            ),
+                            child: AnimatedBuilder(
+                              animation: _controller,
+                              builder: (context, _) {
+                                return CustomPaint(
+                                  painter: _RoomClearancePainter(progress: _controller.value),
+                                );
+                              },
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Container(
@@ -1065,33 +1107,73 @@ class _PrepBriefingScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: AevumColors.border),
                           ),
-                          child: const Column(
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'How the game works',
+                              const Text(
+                                'Step 2: Control the bird with your movement',
                                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                               ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Your goal is to clear as many pipes as possible, up to 60. To control the bird, adjust where you are in your push-up range of motion: higher and lower body positions move the bird up and down.',
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Goal: clear as many pipes as possible (up to 60). The stick figure demos below show that your body position in the movement range controls the bird height.',
                                 style: TextStyle(fontSize: 13, color: AevumColors.textSecondary, height: 1.5),
+                              ),
+                              const SizedBox(height: 12),
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final narrow = constraints.maxWidth < 470;
+                                  final cards = [
+                                    Expanded(
+                                      child: _ControlDemoCard(
+                                        title: 'Push-up Control',
+                                        progress: _controller,
+                                        mode: _ControlDemoMode.pushup,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: _ControlDemoCard(
+                                        title: 'Squat Control',
+                                        progress: _controller,
+                                        mode: _ControlDemoMode.squat,
+                                      ),
+                                    ),
+                                  ];
+
+                                  if (narrow) {
+                                    return Column(
+                                      children: [
+                                        cards[0],
+                                        const SizedBox(height: 10),
+                                        cards[1],
+                                      ],
+                                    );
+                                  }
+
+                                  return Row(
+                                    children: [
+                                      cards[0],
+                                      const SizedBox(width: 10),
+                                      cards[1],
+                                    ],
+                                  );
+                                },
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 18),
                         const Text(
-                          'Tip: Smooth, steady movement usually gives better control than fast spikes.',
+                          'Tip: smooth reps give steadier control than sudden spikes.',
                           style: TextStyle(fontSize: 12, color: AevumColors.textSecondary),
                         ),
                         const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: onContinue,
+                            onPressed: widget.onContinue,
                             icon: const Icon(Icons.arrow_forward),
-                            label: const Text('I HAVE SPACE, CONTINUE'),
+                            label: const Text('I HAVE SPACE, START TUTORIAL'),
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 15),
                             ),
@@ -1107,6 +1189,200 @@ class _PrepBriefingScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _RoomClearancePainter extends CustomPainter {
+  final double progress;
+
+  const _RoomClearancePainter({required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final frame = Paint()..color = const Color(0xFF3A5A78).withAlpha(150);
+    final room = RRect.fromRectAndRadius(
+      Rect.fromLTWH(8, 8, size.width - 16, size.height - 16),
+      const Radius.circular(12),
+    );
+    canvas.drawRRect(room, frame);
+
+    final center = Offset(size.width * 0.5, size.height * 0.58);
+    final breathing = 0.88 + 0.12 * math.sin(progress * math.pi * 2);
+    final clearanceRadius = (size.height * 0.28) * breathing;
+
+    final safePaint = Paint()
+      ..color = const Color(0xFF2CC36B).withAlpha(42)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, clearanceRadius, safePaint);
+
+    final ringPaint = Paint()
+      ..color = const Color(0xFF59D98D).withAlpha(175)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawCircle(center, clearanceRadius, ringPaint);
+
+    final warningPaint = Paint()..color = const Color(0xFFE86A5B).withAlpha(145);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(size.width * 0.08, size.height * 0.24, 24, 24),
+        const Radius.circular(6),
+      ),
+      warningPaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(size.width * 0.84, size.height * 0.68, 24, 24),
+        const Radius.circular(6),
+      ),
+      warningPaint,
+    );
+
+    final personPaint = Paint()
+      ..color = const Color(0xFFF8FCFF)
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    final sway = math.sin(progress * math.pi * 2) * 6;
+    final head = Offset(center.dx + sway, center.dy - 24);
+    canvas.drawCircle(head, 7, personPaint);
+    canvas.drawLine(Offset(head.dx, head.dy + 8), Offset(head.dx, head.dy + 32), personPaint);
+    canvas.drawLine(Offset(head.dx, head.dy + 16), Offset(head.dx - 10, head.dy + 22), personPaint);
+    canvas.drawLine(Offset(head.dx, head.dy + 16), Offset(head.dx + 10, head.dy + 22), personPaint);
+    canvas.drawLine(Offset(head.dx, head.dy + 32), Offset(head.dx - 9, head.dy + 46), personPaint);
+    canvas.drawLine(Offset(head.dx, head.dy + 32), Offset(head.dx + 9, head.dy + 46), personPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RoomClearancePainter oldDelegate) {
+    return oldDelegate.progress != progress;
+  }
+}
+
+enum _ControlDemoMode { pushup, squat }
+
+class _ControlDemoCard extends StatelessWidget {
+  final String title;
+  final Animation<double> progress;
+  final _ControlDemoMode mode;
+
+  const _ControlDemoCard({
+    required this.title,
+    required this.progress,
+    required this.mode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AevumColors.surfaceDim.withAlpha(150),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AevumColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            AspectRatio(
+              aspectRatio: 16 / 8,
+              child: AnimatedBuilder(
+                animation: progress,
+                builder: (context, _) {
+                  return CustomPaint(
+                    painter: _StickBirdControlPainter(
+                      progress: progress.value,
+                      mode: mode,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StickBirdControlPainter extends CustomPainter {
+  final double progress;
+  final _ControlDemoMode mode;
+
+  const _StickBirdControlPainter({required this.progress, required this.mode});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final t = (math.sin(progress * math.pi * 2) + 1) / 2;
+    final figureBaseY = size.height * 0.78;
+    final motionRange = mode == _ControlDemoMode.pushup ? 16.0 : 22.0;
+    final bodyOffset = (0.5 - t) * motionRange;
+
+    final pipePaint = Paint()..color = const Color(0xFF355D87);
+    canvas.drawRect(Rect.fromLTWH(size.width * 0.77, 0, size.width * 0.1, size.height * 0.35), pipePaint);
+    canvas.drawRect(
+      Rect.fromLTWH(size.width * 0.77, size.height * 0.65, size.width * 0.1, size.height * 0.35),
+      pipePaint,
+    );
+
+    final linePaint = Paint()
+      ..color = const Color(0xFFEBF5FF)
+      ..strokeWidth = 2.4
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    if (mode == _ControlDemoMode.pushup) {
+      final torsoY = figureBaseY - 20 + bodyOffset;
+      final head = Offset(size.width * 0.22, torsoY - 20);
+      canvas.drawCircle(head, 5, linePaint);
+      canvas.drawLine(Offset(head.dx, head.dy + 6), Offset(head.dx + 20, torsoY + 10), linePaint);
+      canvas.drawLine(Offset(head.dx + 20, torsoY + 10), Offset(head.dx + 36, torsoY + 10), linePaint);
+      canvas.drawLine(Offset(head.dx + 10, torsoY + 4), Offset(head.dx + 10, torsoY + 18), linePaint);
+      canvas.drawLine(Offset(head.dx + 25, torsoY + 10), Offset(head.dx + 28, torsoY + 22), linePaint);
+      canvas.drawLine(Offset(head.dx + 36, torsoY + 10), Offset(head.dx + 40, torsoY + 22), linePaint);
+    } else {
+      final hipY = figureBaseY - 30 + bodyOffset;
+      final head = Offset(size.width * 0.24, hipY - 24);
+      canvas.drawCircle(head, 5, linePaint);
+      canvas.drawLine(Offset(head.dx, head.dy + 6), Offset(head.dx, hipY), linePaint);
+      final kneeY = hipY + 16 + (1 - t) * 5;
+      canvas.drawLine(Offset(head.dx, hipY), Offset(head.dx - 10, kneeY), linePaint);
+      canvas.drawLine(Offset(head.dx, hipY), Offset(head.dx + 10, kneeY), linePaint);
+      canvas.drawLine(Offset(head.dx - 10, kneeY), Offset(head.dx - 8, figureBaseY + 4), linePaint);
+      canvas.drawLine(Offset(head.dx + 10, kneeY), Offset(head.dx + 8, figureBaseY + 4), linePaint);
+      canvas.drawLine(Offset(head.dx, head.dy + 14), Offset(head.dx - 10, head.dy + 20), linePaint);
+      canvas.drawLine(Offset(head.dx, head.dy + 14), Offset(head.dx + 10, head.dy + 20), linePaint);
+    }
+
+    final birdY = size.height * 0.72 - (t * size.height * 0.34);
+    final birdX = size.width * 0.58;
+    final bird = Path()
+      ..moveTo(birdX - 11, birdY)
+      ..quadraticBezierTo(birdX - 1, birdY - 8, birdX + 11, birdY)
+      ..quadraticBezierTo(birdX - 1, birdY + 8, birdX - 11, birdY)
+      ..close();
+    final birdPaint = Paint()..color = const Color(0xFFDEB857);
+    canvas.drawPath(bird, birdPaint);
+
+    final arrowPaint = Paint()
+      ..color = const Color(0xFF75D0FF)
+      ..strokeWidth = 2;
+    final arrowX = size.width * 0.67;
+    canvas.drawLine(Offset(arrowX, size.height * 0.26), Offset(arrowX, size.height * 0.72), arrowPaint);
+    canvas.drawLine(Offset(arrowX, size.height * 0.26), Offset(arrowX - 4, size.height * 0.31), arrowPaint);
+    canvas.drawLine(Offset(arrowX, size.height * 0.26), Offset(arrowX + 4, size.height * 0.31), arrowPaint);
+    canvas.drawLine(Offset(arrowX, size.height * 0.72), Offset(arrowX - 4, size.height * 0.67), arrowPaint);
+    canvas.drawLine(Offset(arrowX, size.height * 0.72), Offset(arrowX + 4, size.height * 0.67), arrowPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _StickBirdControlPainter oldDelegate) {
+    return oldDelegate.progress != progress || oldDelegate.mode != mode;
   }
 }
 
@@ -1281,6 +1557,11 @@ class _ReadyOverlay extends StatelessWidget {
     required this.cameraPreview,
   });
 
+  String _cleanStatusText(String value) {
+    final noTags = value.replaceAll(RegExp(r'<[^>]*>'), ' ');
+    return noTags.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
@@ -1401,7 +1682,7 @@ class _ReadyOverlay extends StatelessWidget {
                 ],
                 if (cameraMessage != null && cameraReady) ...[
                   Text(
-                    cameraMessage!,
+                    _cleanStatusText(cameraMessage!),
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall
@@ -1410,7 +1691,7 @@ class _ReadyOverlay extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                 ],
-                if (cameraMessage != null && isWeb && cameraDebugInfo != null) ...[
+                if (kDebugMode && cameraMessage != null && isWeb && cameraDebugInfo != null) ...[
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
