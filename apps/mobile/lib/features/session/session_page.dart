@@ -1348,24 +1348,38 @@ class _StickBirdControlPainter extends CustomPainter {
 
     if (mode == _ControlDemoMode.pushup) {
       final bend = 1 - t;
-      final shoulder = Offset(size.width * 0.29, size.height * 0.60 + bodyOffset * 0.55);
-      final hip = Offset(shoulder.dx + 26, shoulder.dy + bend * 2);
-      final knee = Offset(hip.dx + 18, hip.dy + 1 + bend);
-      final ankle = Offset(knee.dx + 15, knee.dy + 1);
-      final elbow = Offset(shoulder.dx + 8, shoulder.dy + 13 + bend * 8);
-      final wrist = Offset(elbow.dx + 7, figureBaseY + 1);
-      final head = Offset(shoulder.dx - 12, shoulder.dy - 13 - bend);
-      final neck = Offset(head.dx + 5, head.dy + 7);
+      final groundY = figureBaseY + 6;
+      final shoulder = Offset(size.width * 0.24, size.height * 0.56 + bodyOffset * 0.6);
+      final hip = Offset(size.width * 0.40, shoulder.dy + bend * 2);
+      final ankle = Offset(size.width * 0.56, shoulder.dy + 4 + bend);
+      final elbow = Offset(size.width * 0.30, shoulder.dy + 12 + bend * 10);
+      final wrist = Offset(size.width * 0.35, groundY);
+      final head = Offset(size.width * 0.18, shoulder.dy - 10 - bend);
+      final neck = Offset(head.dx + 7, head.dy + 7);
+      final knee = Offset(
+        (hip.dx + ankle.dx) / 2,
+        (hip.dy + ankle.dy) / 2 + 1,
+      );
 
-      canvas.drawCircle(head, 5.5, linePaint);
+      final floorPaint = Paint()
+        ..color = const Color(0xFFEBF5FF).withAlpha(52)
+        ..strokeWidth = 1.4
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(
+        Offset(size.width * 0.12, groundY + 9),
+        Offset(size.width * 0.44, groundY + 9),
+        floorPaint,
+      );
+
+      canvas.drawCircle(head, 5.8, linePaint);
       canvas.drawLine(neck, shoulder, linePaint);
       canvas.drawLine(shoulder, hip, linePaint);
       canvas.drawLine(hip, knee, linePaint);
       canvas.drawLine(knee, ankle, linePaint);
       canvas.drawLine(shoulder, elbow, linePaint);
       canvas.drawLine(elbow, wrist, linePaint);
-      canvas.drawLine(wrist, Offset(wrist.dx + 2, wrist.dy + 9), linePaint);
-      canvas.drawLine(ankle, Offset(ankle.dx + 2, ankle.dy + 8), linePaint);
+      canvas.drawLine(wrist, Offset(wrist.dx + 4, wrist.dy), linePaint);
+      canvas.drawLine(ankle, Offset(ankle.dx + 4, ankle.dy + 1), linePaint);
     } else {
       final hipY = figureBaseY - 30 + bodyOffset;
       final head = Offset(size.width * 0.24, hipY - 24);
