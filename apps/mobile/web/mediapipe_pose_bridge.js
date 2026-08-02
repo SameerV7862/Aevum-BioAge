@@ -234,6 +234,8 @@ window.AevumPoseBridge = (() => {
     element.style.height = "100%";
     element.style.position = "absolute";
     element.style.inset = "0";
+    element.style.pointerEvents = "none";
+    element.style.touchAction = "none";
     // Show the full camera frame in the preview instead of cropping in.
     element.style.objectFit = "contain";
     element.style.transform = "scaleX(-1)";
@@ -257,6 +259,8 @@ window.AevumPoseBridge = (() => {
     container.style.boxShadow = "0 8px 20px rgba(0,0,0,0.45)";
     container.style.zIndex = "2147483646";
     container.style.pointerEvents = "none";
+    container.style.touchAction = "none";
+    container.setAttribute("aria-hidden", "true");
 
     applyPreviewLayout(container);
     ensurePreviewLayoutListener();
@@ -305,12 +309,12 @@ window.AevumPoseBridge = (() => {
 
     if (previewLayout === "ready") {
       container.style.left = "50%";
-      container.style.top = viewportWidth < 640 ? "30%" : "28%";
+      container.style.top = viewportWidth < 640 ? "21%" : "28%";
       container.style.right = "auto";
       container.style.bottom = "auto";
       container.style.transform = "translate(-50%, -50%)";
-      container.style.width = viewportWidth < 640 ? "min(62vw, 230px)" : "360px";
-      container.style.height = viewportWidth < 640 ? "min(40vh, 300px)" : "500px";
+      container.style.width = viewportWidth < 640 ? "min(52vw, 188px)" : "360px";
+      container.style.height = viewportWidth < 640 ? "min(32vh, 242px)" : "500px";
       return;
     }
 
@@ -319,8 +323,8 @@ window.AevumPoseBridge = (() => {
     container.style.right = rightPad;
     container.style.bottom = "auto";
     container.style.transform = "none";
-    container.style.width = viewportWidth < 640 ? "min(44vw, 176px)" : "300px";
-    container.style.height = viewportWidth < 640 ? "min(30vh, 235px)" : "400px";
+    container.style.width = viewportWidth < 640 ? "min(38vw, 150px)" : "300px";
+    container.style.height = viewportWidth < 640 ? "min(24vh, 190px)" : "400px";
   }
 
   function ensurePreviewLayoutListener() {

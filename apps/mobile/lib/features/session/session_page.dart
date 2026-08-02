@@ -1584,17 +1584,20 @@ class _ReadyOverlay extends StatelessWidget {
     return Container(
       color: AevumColors.surfaceDim.withAlpha(92),
       child: SafeArea(
-        child: Column(
-          children: [
-            const Spacer(),
-            Padding(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
               padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 16, vertical: compact ? 8 : 12),
-              child: Card(
-                child: Padding(
-                  padding: cardPadding,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight - (compact ? 16 : 24)),
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Card(
+                    child: Padding(
+                      padding: cardPadding,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                 Icon(
                   pipelineActive ? Icons.fitness_center : Icons.videocam_off,
                   size: 64, color: AevumColors.primary,
@@ -1773,12 +1776,14 @@ class _ReadyOverlay extends StatelessWidget {
                   Text('Pose tracking initializes after camera permission is granted',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AevumColors.warning)),
                 ],
-                    ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
