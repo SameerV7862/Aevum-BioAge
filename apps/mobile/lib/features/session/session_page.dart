@@ -24,6 +24,73 @@ import '../../theme/aevum_colors.dart';
 // ---------- Session flow phases ----------
 enum _Phase { profileInput, prepBriefing, playing }
 
+class _ResearchStudyLink {
+  final String title;
+  final String source;
+  final String url;
+
+  const _ResearchStudyLink({
+    required this.title,
+    required this.source,
+    required this.url,
+  });
+}
+
+const _citedResearchStudies = <_ResearchStudyLink>[
+  _ResearchStudyLink(
+    title: 'A novel estimate of biological aging by multiple fitness assessments',
+    source: 'Frontiers in Physiology (2023)',
+    url: 'https://doi.org/10.3389/fphys.2023.1164943',
+  ),
+  _ResearchStudyLink(
+    title: 'Association Between Push-up Exercise Capacity and Future Cardiovascular Events Among Active Adult Men',
+    source: 'JAMA Network Open (2019)',
+    url: 'https://pubmed.ncbi.nlm.nih.gov/?term=Association+Between+Push-up+Exercise+Capacity+and+Future+Cardiovascular+Events+Among+Active+Adult+Men',
+  ),
+];
+
+void _showResearchLinksDialog(BuildContext context) {
+  showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: AevumColors.surface,
+      title: const Text('Cited research links'),
+      content: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _citedResearchStudies.map((study) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(study.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(study.source, style: const TextStyle(fontSize: 12, color: AevumColors.textSecondary)),
+                    const SizedBox(height: 4),
+                    SelectableText(
+                      study.url,
+                      style: const TextStyle(fontSize: 12, color: AevumColors.primary),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
+      ],
+    ),
+  );
+}
+
 class SessionPage extends StatefulWidget {
   static const routeName = '/session';
   const SessionPage({super.key});
@@ -373,10 +440,22 @@ class _SessionPageState extends State<SessionPage> {
 
     if (!mounted || _gameState != GameState.playing) return;
 
-    final calibratedPoseHeight = _mode == 'pushup'
+    var calibratedPoseHeight = _mode == 'pushup'
       ? _poseHeightCalibrator.normalizeRelativeToBaseline(controlPoseHeight)
       : _poseHeightCalibrator.normalizeForControl(controlPoseHeight);
+    if (_mode == 'squat') {
+      calibratedPoseHeight = _softenSquatControlInput(calibratedPoseHeight);
+    }
     _game.setPoseVerticalInput(calibratedPoseHeight);
+  }
+
+  double _softenSquatControlInput(double normalizedInput) {
+    final centered = (normalizedInput.clamp(0.0, 1.0) - 0.5) * 0.72;
+    const deadband = 0.055;
+    if (centered.abs() <= deadband) return 0.5;
+    final shifted = (centered.abs() - deadband) / (0.5 - deadband);
+    final remapped = centered.isNegative ? -shifted : shifted;
+    return (0.5 + remapped * 0.5).clamp(0.0, 1.0);
   }
 
   void _onProfileSubmitted(UserProfile profile) {
@@ -445,7 +524,8 @@ class _SessionPageState extends State<SessionPage> {
 
     final readyFrameRatio = _calibrationFrames == 0 ? 0.0 : _calibrationReadyFrames / _calibrationFrames;
     final observedRange = _calibrationMaxPoseHeight - _calibrationMinPoseHeight;
-    final calibratorReady = _poseHeightCalibrator.finalizeCalibration(minimumRange: 0.07);
+    final minimumRange = _mode == 'squat' ? 0.12 : 0.07;
+    final calibratorReady = _poseHeightCalibrator.finalizeCalibration(minimumRange: minimumRange);
     final enoughSamples = _calibrationHeightSamples >= 8;
     final passedCalibration = passedPipe && calibratorReady && enoughSamples && readyFrameRatio >= 0.15;
 
@@ -453,9 +533,13 @@ class _SessionPageState extends State<SessionPage> {
       final baseline = _calibrationHeightSamples > 0
           ? _calibrationHeightSum / _calibrationHeightSamples
           : (_calibrationMinPoseHeight + _calibrationMaxPoseHeight) / 2;
+      final targetRange = _mode == 'squat' ? 0.24 : 0.16;
+      final expandedRange = math.max(observedRange * (_mode == 'squat' ? 1.6 : 1.35), targetRange);
+      final lockedMin = (baseline - expandedRange * 0.58).clamp(0.0, 1.0);
+      final lockedMax = (baseline + expandedRange * 0.42).clamp(0.0, 1.0);
       _poseHeightCalibrator.setLockedRange(
-        minValue: _calibrationMinPoseHeight,
-        maxValue: _calibrationMaxPoseHeight,
+        minValue: lockedMin,
+        maxValue: lockedMax,
         baseline: baseline,
       );
 
@@ -505,7 +589,7 @@ class _SessionPageState extends State<SessionPage> {
       _readyToStart = false;
       _viewMessage = passedCalibration
           ? 'Demo complete. Calibration locked. Press CONTINUE to start your run.'
-          : observedRange < 0.06
+          : observedRange < (_mode == 'squat' ? 0.1 : 0.06)
               ? 'Move through a larger range in the demo and try again.'
               : 'Calibration data was noisy. Keep your torso centered and run the demo again.';
       if (!passedCalibration) {
@@ -1129,6 +1213,30 @@ class _PrepBriefingScreenState extends State<_PrepBriefingScreen>
                                 'Goal: clear as many pipes as possible (up to 60). The stick figure demos below show that your body position in the movement range controls the bird height.',
                                 style: TextStyle(fontSize: 13, color: AevumColors.textSecondary, height: 1.5),
                               ),
+                              const SizedBox(height: 10),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                                decoration: BoxDecoration(
+                                  color: AevumColors.muted,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AevumColors.border),
+                                ),
+                                child: const Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Push-up game: start in a high plank (hands under shoulders, body in one straight line).',
+                                      style: TextStyle(fontSize: 12, color: AevumColors.textSecondary, height: 1.4),
+                                    ),
+                                    SizedBox(height: 6),
+                                    Text(
+                                      'Squat game: stand with feet shoulder-width, chest up, and knees tracking over toes as you lower and rise.',
+                                      style: TextStyle(fontSize: 12, color: AevumColors.textSecondary, height: 1.4),
+                                    ),
+                                  ],
+                                ),
+                              ),
                               const SizedBox(height: 12),
                               LayoutBuilder(
                                 builder: (context, constraints) {
@@ -1348,26 +1456,23 @@ class _StickBirdControlPainter extends CustomPainter {
 
     if (mode == _ControlDemoMode.pushup) {
       final bend = 1 - t;
-      final groundY = figureBaseY + 6;
-      final shoulder = Offset(size.width * 0.44, size.height * 0.56 + bodyOffset * 0.6);
-      final hip = Offset(size.width * 0.30, shoulder.dy + bend * 2);
-      final ankle = Offset(size.width * 0.14, groundY - 2);
-      final elbow = Offset(size.width * 0.51, shoulder.dy + 12 + bend * 10);
-      final wrist = Offset(size.width * 0.57, groundY);
-      final head = Offset(size.width * 0.60, shoulder.dy - 10 - bend);
-      final neck = Offset(head.dx - 7, head.dy + 7);
-      final knee = Offset(
-        (hip.dx + ankle.dx) / 2,
-        (hip.dy + ankle.dy) / 2 + 1,
-      );
+      final groundY = figureBaseY + 8;
+      final shoulder = Offset(size.width * 0.50, size.height * 0.56 + bodyOffset * 0.55);
+      final hip = Offset(size.width * 0.36, shoulder.dy + bend * 1.8);
+      final knee = Offset(size.width * 0.24, groundY - 8 + bend * 1.6);
+      final ankle = Offset(size.width * 0.16, groundY - 1);
+      final elbow = Offset(size.width * 0.56, shoulder.dy + 11 + bend * 9);
+      final wrist = Offset(size.width * 0.60, groundY - 1);
+      final head = Offset(size.width * 0.64, shoulder.dy - 10 - bend);
+      final neck = Offset(head.dx - 8, head.dy + 7);
 
       final floorPaint = Paint()
         ..color = const Color(0xFFEBF5FF).withAlpha(52)
         ..strokeWidth = 1.4
         ..strokeCap = StrokeCap.round;
       canvas.drawLine(
-        Offset(size.width * 0.16, groundY + 9),
-        Offset(size.width * 0.62, groundY + 9),
+        Offset(size.width * 0.12, groundY + 9),
+        Offset(size.width * 0.64, groundY + 9),
         floorPaint,
       );
 
@@ -1378,8 +1483,8 @@ class _StickBirdControlPainter extends CustomPainter {
       canvas.drawLine(knee, ankle, linePaint);
       canvas.drawLine(shoulder, elbow, linePaint);
       canvas.drawLine(elbow, wrist, linePaint);
-      canvas.drawLine(wrist, Offset(wrist.dx - 4, wrist.dy), linePaint);
-      canvas.drawLine(ankle, Offset(ankle.dx + 5, groundY - 2), linePaint);
+      canvas.drawLine(wrist, Offset(wrist.dx - 5, wrist.dy), linePaint);
+      canvas.drawLine(ankle, Offset(ankle.dx + 7, groundY - 1), linePaint);
     } else {
       final hipY = figureBaseY - 30 + bodyOffset;
       final head = Offset(size.width * 0.24, hipY - 24);
@@ -1647,7 +1752,9 @@ class _ReadyOverlay extends StatelessWidget {
                       ? 'Guide the crane through spaced pipes. Clear one pipe to complete calibration.'
                       : calibrationComplete
                         ? 'Calibration is complete. Press CONTINUE to start the real run.'
-                        : 'Choose ${mode == 'pushup' ? 'push-ups' : 'squats'} and start the demo calibration.'
+                        : mode == 'pushup'
+                            ? 'Push-up mode: start in a high plank (hands under shoulders, straight body line), then begin demo calibration.'
+                            : 'Squat mode: stand shoulder-width with chest up and knees over toes, then begin demo calibration.'
                       : (isWeb
                           ? 'Enable camera access to start browser pose tracking on laptop or mobile.'
                           : 'Allow camera access to begin pose tracking'),
@@ -1929,6 +2036,12 @@ class _GameOverOverlay extends StatelessWidget {
                         onPressed: onRestart,
                         icon: const Icon(Icons.refresh),
                         label: const Text('PLAY AGAIN'),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: () => _showResearchLinksDialog(context),
+                        icon: const Icon(Icons.menu_book_outlined),
+                        label: const Text('VIEW CITED RESEARCH'),
                       ),
                     ],
                   ),
